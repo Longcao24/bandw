@@ -22,8 +22,9 @@ void resetCalibration() {
 void fatal(const char* message) {
     Serial.println(message);
     while (true) {
+        if (Serial) Serial.println(message);
         digitalWrite(LED_BUILTIN, LOW); delay(100);
-        digitalWrite(LED_BUILTIN, HIGH); delay(100);
+        digitalWrite(LED_BUILTIN, HIGH); delay(900);
     }
 }
 void setup() {

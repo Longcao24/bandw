@@ -77,3 +77,19 @@ c++ -std=c++11 -Wall -Wextra -pedantic firmware/tests/gesture_test.cpp -o /tmp/b
 Chưa nạp lên board, chưa thử BLE/IMU/TTS end-to-end trên phần cứng thật vì không có thiết bị kết nối ở thời điểm build. File `.bin` trong gói phát hành là binary để dùng với uploader tương thích; không kéo thả vào ổ bootloader UF2. Cách nạp được hướng dẫn ở trên là Upload sketch bằng Arduino IDE/CLI.
 
 Tài liệu tham chiếu: [Seeed IMU](https://wiki.seeedstudio.com/XIAO-BLE-Sense-IMU-Usage/), [Seeed BLE với mbed](https://wiki.seeedstudio.com/XIAO-BLE-Sense-Bluetooth-Usage/), [quyền Bluetooth Android](https://developer.android.com/develop/connectivity/bluetooth/bt-permissions).
+
+## XIAO nRF52840 Sense Plus — core 2.9.3
+
+Trên core 2.9.3 đã kiểm tra ở máy này, `variants/SEEED_XIAO_NRF52840_SENSE_PLUS/defines.txt` khai báo `TARGET_SEEED_XIAO_NRF52840_PLUS` thay vì `TARGET_SEEED_XIAO_NRF52840_SENSE_PLUS`. Thư viện IMU vì vậy chọn Wire (bus ngoài) thay vì Wire1 (IMU tích hợp), gây lỗi `LSM6DS3 not found`.
+
+Dùng script để bổ sung cờ compile cho toàn bộ thư viện, không phải chỉ thêm `#define` vào sketch:
+
+```sh
+./firmware/scripts/build-sense-plus.sh
+# Build và nạp; thay port nếu khác:
+./firmware/scripts/build-sense-plus.sh /dev/cu.usbmodem1101
+```
+
+Binary dành cho Sense thường trong v0.2.0 không phải binary Sense Plus. Với Plus, dùng script trên để build và nạp đúng variant. Nếu dùng Arduino IDE, cần cấu hình cờ tương đương hoặc core đã sửa lỗi này.
+
+Kiểm tra USB trên board người dùng ngày 2026-09-18: upload Sense Plus thành công; sau khi thêm cờ ở trên, firmware phản hồi lệnh `c` với `CALIBRATE`, xác nhận đã qua khởi tạo IMU/BLE và vào vòng lặp chính. Chưa xác nhận hiệu chuẩn hoàn tất hoặc các cử chỉ thực tế qua BLE.
