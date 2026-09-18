@@ -4,8 +4,8 @@ MVP rule-based, không train AI. Dùng IMU LSM6DS3 tích hợp và BLE để g�
 
 | Cử chỉ | Payload ASCII | Câu trên Android |
 |---|---|---|
-| Nghiêng tay trái, giữ khoảng 0,8–1 giây | `WATER` | Tôi muốn uống nước. |
-| Nghiêng tay phải, giữ khoảng 0,8–1 giây | `FOOD` | Tôi muốn ăn. |
+| Nghiêng tay trái, giữ khoảng 0,4–0,6 giây | `WATER` | Tôi muốn uống nước. |
+| Nghiêng tay phải, giữ khoảng 0,4–0,6 giây | `FOOD` | Tôi muốn ăn. |
 | Lắc cổ tay qua lại, 3 pha đảo chiều nhanh | `NO` | Không. |
 
 ## Nạp bằng Arduino IDE
@@ -16,7 +16,7 @@ MVP rule-based, không train AI. Dùng IMU LSM6DS3 tích hợp và BLE để g�
 4. Trong Library Manager, cài **ArduinoBLE 2.1.0** và **Seeed Arduino LSM6DS3 2.0.7**. Đây là các phiên bản đã dùng để compile.
 5. Mở `BandW_Sense/BandW_Sense.ino`. Giữ `GestureDetector.h` cùng thư mục sketch.
 6. Cắm XIAO bằng cáp USB truyền dữ liệu, chọn port của XIAO rồi Upload. Nếu không thấy port, nhấn Reset hai lần để vào bootloader rồi chọn lại port.
-7. Giữ cổ tay ở tư thế trung tính, board gần nằm ngang và đứng yên ít nhất 2 giây sau khi khởi động để hiệu chuẩn. Firmware chạy cả khi không mở Serial Monitor.
+7. Giữ cổ tay ở tư thế trung tính, board đứng yên ở tư thế trung tính ít nhất 2 giây sau khi khởi động để hiệu chuẩn. Firmware chạy cả khi không mở Serial Monitor.
 
 Không cần nối thêm IMU. Hướng khởi đầu: mặt linh kiện hướng lên, đầu USB hướng về ngón tay. Hướng trục thực tế cần kiểm tra với cách đeo của bạn; nếu trái/phải bị đảo, đổi `TILT_SIGN` từ `1.0f` sang `-1.0f` trong `GestureDetector.h`, rồi nạp lại.
 
@@ -27,7 +27,7 @@ Không cần nối thêm IMU. Hướng khởi đầu: mặt linh kiện hướng
 3. Đợi quét 8 giây, chọn **BandW-Sense** đúng địa chỉ. Không cần pair trong Cài đặt Bluetooth.
 4. Android 8–11 cần quyền và dịch vụ Vị trí bật để quét BLE. Android 12+ hỏi quyền Thiết bị ở gần.
 5. Khi app báo sẵn sàng, giữ tay trung tính khoảng nửa giây rồi thử cử chỉ.
-6. Sau mỗi lệnh, trở về trung tính và chờ khoảng 2 giây trước cử chỉ tiếp theo.
+6. Sau mỗi lệnh, trở về trung tính và chờ khoảng 1 giây trước cử chỉ tiếp theo.
 
 Giữ app ở foreground trong bản demo. Rời app, khóa màn hình hoặc xoay màn hình sẽ ngắt BLE; quay lại bấm Kết nối. App không chạy dịch vụ nền. Mất kết nối không lưu hay phát lại cử chỉ cũ.
 
@@ -39,15 +39,16 @@ Serial Monitor **115200 baud**:
 - `APP READY`: điện thoại đã đăng ký nhận notification.
 - `TX WATER`, `TX FOOD`, `TX NO`: firmware đã cập nhật characteristic; đây không phải xác nhận điện thoại đã đọc thành tiếng.
 - Gửi ký tự `c` để hiệu chuẩn lại tư thế trung tính.
+- Gửi `d` để bật/tắt log IMU 10 Hz (ax, ay, az tính bằng g; gx, gy, gz tính bằng °/giây), phục vụ hiệu chỉnh theo cử chỉ thực tế.
 
 LED tích hợp: nháy nhanh khi hiệu chuẩn, nháy chậm khi chờ app, sáng liên tục khi đã hiệu chuẩn và app đã subscribe. Lỗi khởi tạo IMU/BLE sẽ nháy nhanh liên tục; kiểm tra Serial và đúng loại board.
 
 Thông số trong `GestureDetector.h`:
-- `TILT_ENTER_DEG = 30`: góc nghiêng tối thiểu so với tư thế trung tính.
-- `HOLD_MS = 500`: giữ góc đủ lâu sau khi chuyển động đã lắng; tổng thao tác thực tế thường lâu hơn 500 ms.
-- `TILT_EXIT_DEG = 12`, `NEUTRAL_MS = 400`: ngưỡng và thời gian trở về trung tính.
-- `SHAKE_DPS = 150`: tốc độ góc trục Y để đếm một pha lắc. Cần 3 pha luân phiên trong 900 ms, cách nhau ít nhất 80 ms.
-- `COOLDOWN_MS = 1200`: khoảng nghỉ sau một lệnh, sau đó vẫn phải về trung tính.
+- `TILT_ENTER_DEG = 22`: góc nghiêng tối thiểu so với tư thế trung tính.
+- `HOLD_MS = 250`: giữ góc đủ lâu sau khi chuyển động đã lắng; tổng thao tác thực tế thường lâu hơn 250 ms.
+- `TILT_EXIT_DEG = 12`, `NEUTRAL_MS = 200`: ngưỡng và thời gian trở về trung tính.
+- `SHAKE_DPS = 100`: tốc độ góc trục Y để đếm một pha lắc. Cần 3 pha luân phiên trong 900 ms, cách nhau ít nhất 80 ms.
+- `COOLDOWN_MS = 650`: khoảng nghỉ sau một lệnh, sau đó vẫn phải về trung tính.
 
 Board phải gắn chắc trên cổ tay. Nếu đặt xoay 90° so với hướng trên, cần đổi trục đọc cho tilt/shake; hiệu chuẩn chỉ đặt góc trung tính, không tự suy ra hướng đeo. Các ngưỡng là giá trị khởi đầu, chưa được đo với cử chỉ thực tế của người dùng.
 
@@ -93,3 +94,8 @@ Dùng script để bổ sung cờ compile cho toàn bộ thư viện, không ph�
 Binary dành cho Sense thường trong v0.2.0 không phải binary Sense Plus. Với Plus, dùng script trên để build và nạp đúng variant. Nếu dùng Arduino IDE, cần cấu hình cờ tương đương hoặc core đã sửa lỗi này.
 
 Kiểm tra USB trên board người dùng ngày 2026-09-18: upload Sense Plus thành công; sau khi thêm cờ ở trên, firmware phản hồi lệnh `c` với `CALIBRATE`, xác nhận đã qua khởi tạo IMU/BLE và vào vòng lặp chính. Chưa xác nhận hiệu chuẩn hoàn tất hoặc các cử chỉ thực tế qua BLE.
+
+
+Bản điều chỉnh độ nhạy: nghiêng 22°, giữ 250 ms, chờ chuyển động lắng 150 ms; lắc 100°/giây; nghỉ 650 ms và về trung tính 200 ms. Kiểm thử tổng hợp bổ sung xác nhận nghiêng ±25° nhận trong 600 ms, lắc ±110°/giây được nhận, và nhiễu nhỏ ±10°/±70°/giây không tạo lệnh. Chưa xác định tỉ lệ nhận đúng trên người đeo thực tế.
+
+Hiệu chuẩn đã mở rộng để chấp nhận board dựng nghiêng trong mặt phẳng X/Z thay vì bắt buộc gần nằm ngang. Giữ yên ở tư thế bạn muốn dùng làm trung tính trong 2 giây; tránh để trục Y thẳng đứng (khi đó góc X/Z không xác định tốt). Hướng gắn board vẫn quyết định trục nghiêng trái/phải.

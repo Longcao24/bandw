@@ -11,13 +11,15 @@ GestureDetector detector;
 const uint32_t SAMPLE_MS = 20;
 uint32_t sampleAt = 0, blinkAt = 0;
 bool calibrated = false, wasSubscribed = false, ledOn = false;
+bool debugImu = false;
+uint32_t debugAt = 0;
 int calibrationCount = 0;
 float sumX = 0, sumZ = 0, previousX = 0, previousY = 0, previousZ = 0;
 
 void resetCalibration() {
     calibrated = false; calibrationCount = 0; sumX = sumZ = 0;
     detector.disarm();
-    Serial.println("CALIBRATE: hold wrist still and flat for 2 seconds (USB end toward fingers).");
+    Serial.println("CALIBRATE: hold wrist still in your neutral pose for 2 seconds.");
 }
 void fatal(const char* message) {
     Serial.println(message);
@@ -52,6 +54,7 @@ void loop() {
     if (Serial.available()) {
         char input = Serial.read();
         if (input == 'c' || input == 'C') resetCalibration();
+        if (input == 'd' || input == 'D') debugImu = !debugImu;
     }
     uint32_t now = millis();
     bool subscribed = gestureCharacteristic.subscribed();
@@ -68,12 +71,18 @@ void loop() {
     sampleAt = now;
     float x = imu.readFloatAccelX(), y = imu.readFloatAccelY(), z = imu.readFloatAccelZ();
     float gx = imu.readFloatGyroX(), gy = imu.readFloatGyroY(), gz = imu.readFloatGyroZ();
+    if (debugImu && Serial && uint32_t(now - debugAt) >= 100) {
+        debugAt = now;
+        Serial.print("IMU ax,ay,az,gx,gy,gz: ");
+        Serial.print(x, 3); Serial.print(','); Serial.print(y, 3); Serial.print(','); Serial.print(z, 3);
+        Serial.print(','); Serial.print(gx, 1); Serial.print(','); Serial.print(gy, 1); Serial.print(','); Serial.println(gz, 1);
+    }
     if (!isfinite(x) || !isfinite(y) || !isfinite(z) || !isfinite(gx) || !isfinite(gy) || !isfinite(gz)) {
         resetCalibration(); return;
     }
     if (!calibrated) {
         float magnitude = sqrtf(x*x + y*y + z*z);
-        bool steady = magnitude > 0.85f && magnitude < 1.15f && fabsf(z) > 0.65f
+        bool steady = magnitude > 0.85f && magnitude < 1.15f && sqrtf(x*x + z*z) > 0.65f
             && fabsf(gx) < 15 && fabsf(gy) < 15 && fabsf(gz) < 15
             && (!calibrationCount || (fabsf(x-previousX) < 0.06f && fabsf(y-previousY) < 0.06f && fabsf(z-previousZ) < 0.06f));
         previousX = x; previousY = y; previousZ = z;

@@ -6,12 +6,12 @@
 // Board mounted flat at neutral, X is the left/right tilt axis, Z faces up.
 // Change TILT_SIGN if the physical left/right direction is reversed.
 static const float TILT_SIGN = 1.0f;
-static const float TILT_ENTER_DEG = 30.0f;
+static const float TILT_ENTER_DEG = 22.0f;
 static const float TILT_EXIT_DEG = 12.0f;
-static const float SHAKE_DPS = 150.0f;
-static const uint32_t HOLD_MS = 500;
-static const uint32_t NEUTRAL_MS = 400;
-static const uint32_t COOLDOWN_MS = 1200;
+static const float SHAKE_DPS = 100.0f;
+static const uint32_t HOLD_MS = 250;
+static const uint32_t NEUTRAL_MS = 200;
+static const uint32_t COOLDOWN_MS = 650;
 
 enum class Gesture { None, Water, Food, No };
 
@@ -71,7 +71,7 @@ public:
             shakeSign = sign; pulseAt = now; ++shakePulses;
             if (shakePulses >= 3) return emit(Gesture::No, now);
         }
-        if (uint32_t(now - lastMotion) < 300 || magnitude < 0.85f || magnitude > 1.15f) {
+        if (uint32_t(now - lastMotion) < 150 || magnitude < 0.85f || magnitude > 1.15f) {
             candidate = 0; return Gesture::None;
         }
         int direction = filtered < -TILT_ENTER_DEG ? -1 : filtered > TILT_ENTER_DEG ? 1 : 0;

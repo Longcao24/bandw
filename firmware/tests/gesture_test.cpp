@@ -46,5 +46,22 @@ int main() {
     Rig reconnect; reconnect.neutral(); reconnect.detector.disarm(); reconnect.hold(-45,1800);
     assert(reconnect.events.empty()); reconnect.neutral(); reconnect.hold(-45,1500);
     assert(reconnect.events.size()==1);
+    Rig upright; upright.detector.calibrate(-1,0,upright.now);
+    upright.hold(-90,1000); upright.hold(-115,600);
+    assert(upright.events.size()==1 && upright.events[0]==Gesture::Water);
+    Rig gentle; gentle.neutral(); gentle.hold(-25,600);
+    assert(gentle.events.size()==1 && gentle.events[0]==Gesture::Water);
+    gentle.neutral(); gentle.hold(25,600);
+    assert(gentle.events.size()==2 && gentle.events[1]==Gesture::Food);
+    Rig resting; resting.neutral();
+    for(int i=0;i<300;++i) resting.sample(i%2 ? 10 : -10, i%2 ? 70 : -70);
+    assert(resting.events.empty());
+    Rig softShake; softShake.neutral();
+    for(int phase=0;phase<3;++phase)
+        for(int i=0;i<5;++i) softShake.sample(0,phase%2 ? -110 : 110);
+    assert(softShake.events.size()==1 && softShake.events[0]==Gesture::No);
+    softShake.hold(25,1000); assert(softShake.events.size()==1);
+    softShake.hold(0,500); softShake.hold(25,600);
+    assert(softShake.events.size()==2 && softShake.events[1]==Gesture::Food);
     puts("PASS: left/right, hold, neutral rearm, shake priority, transient/slow/noisy motion, invalid input, reconnect, timer rollover");
 }
