@@ -106,3 +106,9 @@ Hiệu chuẩn đã mở rộng để chấp nhận board dựng nghiêng trong 
 Nút **Hiệu chuẩn vòng tay** gửi ASCII `CALIBRATE` đến characteristic `c91b0003-7d7a-4f8c-9d29-6e44c786a321` (Read + Write + Notify, tối đa 20 byte). Firmware trả `CALIBRATING` khi bắt đầu và `READY` khi đã lấy đủ 100 mẫu đứng yên. App subscribe cả characteristic cử chỉ lẫn trạng thái, rồi đọc trạng thái hiện tại để không bỏ lỡ hiệu chuẩn khi mới kết nối. Các thao tác GATT được thực hiện tuần tự.
 
 Không thực hiện cử chỉ trong lúc hiệu chuẩn. Nếu thay cách đeo hoặc đổi tư thế tay trung tính, bấm nút này để lấy lại mốc. App chờ tối đa 30 giây; nếu chưa xong sẽ ngắt kết nối và hướng dẫn giữ yên/đổi tư thế để thử lại. Không có timer giả báo thành công: chỉ `READY` từ board mới báo hoàn tất.
+
+## Nạp qua web (không cần Arduino IDE)
+
+Mở [BandW Web Flasher](https://longcao24.github.io/bandw/) bằng Chrome/Edge trên máy tính. Cắm board, xác nhận Sense Plus, chọn cổng USB. Trang gửi yêu cầu tự chuyển bootloader qua 1200 baud + DTR; chọn cổng nạp mới khi Chrome yêu cầu rồi bấm Nạp. Reset hai lần chỉ là phương án khôi phục khi firmware không phản hồi.
+
+Kiểm thử ngày 2026-09-18: dùng chính `web/dfu.mjs` qua adapter serial trên máy Mac, board thật đã xác nhận toàn bộ gói firmware. Đã thử cả bắt đầu ở bootloader và tự chuyển từ firmware đang chạy (USB 8064 → 0065), không nhấn nút Reset. Đây là kiểm thử bộ nạp với thiết bị thật; chưa phải xác nhận hộp thoại Web Serial trên Windows.
