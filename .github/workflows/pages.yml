@@ -1,0 +1,38 @@
+name: Deploy BandW Web Flasher
+on:
+  push:
+    branches: [main]
+    paths: ['web/**', '.github/workflows/pages.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test DFU protocol and firmware integrity
+        run: node --test web/tests/*.test.mjs
+      - uses: actions/configure-pages@v5
+      - name: Prepare static files
+        run: |
+          mkdir -p site/firmware
+          cp web/index.html web/style.css web/app.mjs web/dfu.mjs web/favicon.svg web/LICENSE-NORDIC.txt site/
+          cp web/firmware/* site/firmware/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
