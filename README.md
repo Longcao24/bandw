@@ -1,10 +1,10 @@
 # BandW — Android demo
 
-App Android native cho prototype vòng tay XIAO nRF52840 Sense. Bản 0.2.0 hỗ trợ mô phỏng và nhận BLE từ firmware rule-based trong thư mục `firmware/`. Không cần train AI.
+App Android native cho prototype vòng tay XIAO nRF52840 Sense. Bản 0.2.1 hỗ trợ mô phỏng và nhận BLE từ firmware rule-based trong thư mục `firmware/`. Không cần train AI.
 
 ## Tải và cài APK
 
-[Tải APK v0.2.0](https://github.com/Longcao24/bandw/releases/download/v0.2.0/BandW-0.2.0-debug.apk) · [Tất cả bản phát hành](https://github.com/Longcao24/bandw/releases)
+[Tải APK v0.2.1](https://github.com/Longcao24/bandw/releases/download/v0.2.1/BandW-0.2.1-debug.apk) · [Tất cả bản phát hành](https://github.com/Longcao24/bandw/releases)
 
 Mở link APK trên điện thoại Android 8.0+, tải xuống rồi mở file để cài. Nếu Android hỏi, cho phép trình duyệt hoặc ứng dụng quản lý file **Cài đặt ứng dụng không rõ nguồn gốc**. Đây là APK debug dành cho demo, chưa phát hành trên Play Store.
 

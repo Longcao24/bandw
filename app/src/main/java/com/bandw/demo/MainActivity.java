@@ -52,32 +52,38 @@ public class MainActivity extends Activity {
     }
 
     private void buildScreen() {
+        LinearLayout root = column();
+        root.setBackgroundColor(Color.parseColor("#F6F7F2"));
+        LinearLayout connectionPanel = column();
+        connectionPanel.setPadding(dp(24), dp(12), dp(24), dp(12));
+        root.addView(connectionPanel);
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
         scroll.setBackgroundColor(Color.parseColor("#F6F7F2"));
         LinearLayout page = column();
         page.setPadding(dp(24), dp(20), dp(24), dp(24));
         scroll.addView(page);
-        scroll.setOnApplyWindowInsetsListener((v, insets) -> {
+        root.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
+        root.setOnApplyWindowInsetsListener((v, insets) -> {
             v.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(),
                     insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom());
             return insets.consumeSystemWindowInsets();
         });
-        setContentView(scroll);
-        scroll.requestApplyInsets();
+        setContentView(root);
+        root.requestApplyInsets();
 
         TextView brand = text("bandw   /   VÒNG TAY GIAO TIẾP", 13, true);
         brand.setTextColor(Color.parseColor("#215C47"));
-        page.addView(brand);
+        connectionPanel.addView(brand);
         add(page, text("Một cử chỉ.\nMột lời nói.", 34, true), 18);
         add(page, text("Chạm để mô phỏng điều bạn muốn nói.", 16, false), 8);
         TextView mode = text("●  CHẾ ĐỘ MÔ PHỎNG  ·  Chưa kết nối vòng tay", 12, true);
         mode.setPadding(dp(14), dp(12), dp(14), dp(12));
         mode.setBackground(background("#E8EDDF", 14));
-        add(page, mode, 22);
+        add(connectionPanel, mode, 10);
         connectionStatus = mode;
-        add(page, button("Kết nối vòng tay", "#E8EDDF", () -> ble.start()), 10);
-        add(page, button("Ngắt kết nối", "#FFFFFF", () -> ble.disconnect("Đã ngắt kết nối · Có thể dùng mô phỏng")), 6);
+        add(connectionPanel, button("Kết nối vòng tay", "#D5F28B", () -> ble.start()), 10);
+        add(connectionPanel, button("Ngắt kết nối", "#FFFFFF", () -> ble.disconnect("Đã ngắt kết nối · Có thể dùng mô phỏng")), 6);
 
         LinearLayout message = column();
         message.setPadding(dp(22), dp(22), dp(22), dp(22));
