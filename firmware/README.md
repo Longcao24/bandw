@@ -1,6 +1,6 @@
 # Firmware BandW — XIAO nRF52840 Sense
 
-MVP rule-based, không train AI. Dùng IMU LSM6DS3 tích hợp và BLE để gửi lệnh tới app Android BandW 0.2.0.
+MVP rule-based, không train AI. Dùng IMU LSM6DS3 tích hợp và BLE để gửi lệnh tới app Android BandW 0.3.0.
 
 | Cử chỉ | Payload ASCII | Câu trên Android |
 |---|---|---|
@@ -22,7 +22,7 @@ Không cần nối thêm IMU. Hướng khởi đầu: mặt linh kiện hướng
 
 ## Kết nối điện thoại
 
-1. Cài APK BandW **0.2.0** đi kèm (bản 0.1.0 chỉ mô phỏng).
+1. Cài APK BandW **0.3.0** đi kèm (bản 0.1.0 chỉ mô phỏng).
 2. Bật Bluetooth. Trong app, bấm **Kết nối vòng tay**, cấp quyền nếu được hỏi.
 3. Đợi quét 8 giây, chọn **BandW-Sense** đúng địa chỉ. Không cần pair trong Cài đặt Bluetooth.
 4. Android 8–11 cần quyền và dịch vụ Vị trí bật để quét BLE. Android 12+ hỏi quyền Thiết bị ở gần.
@@ -99,3 +99,10 @@ Kiểm tra USB trên board người dùng ngày 2026-09-18: upload Sense Plus th
 Bản điều chỉnh độ nhạy: nghiêng 22°, giữ 250 ms, chờ chuyển động lắng 150 ms; lắc 100°/giây; nghỉ 650 ms và về trung tính 200 ms. Kiểm thử tổng hợp bổ sung xác nhận nghiêng ±25° nhận trong 600 ms, lắc ±110°/giây được nhận, và nhiễu nhỏ ±10°/±70°/giây không tạo lệnh. Chưa xác định tỉ lệ nhận đúng trên người đeo thực tế.
 
 Hiệu chuẩn đã mở rộng để chấp nhận board dựng nghiêng trong mặt phẳng X/Z thay vì bắt buộc gần nằm ngang. Giữ yên ở tư thế bạn muốn dùng làm trung tính trong 2 giây; tránh để trục Y thẳng đứng (khi đó góc X/Z không xác định tốt). Hướng gắn board vẫn quyết định trục nghiêng trái/phải.
+
+
+## Hiệu chuẩn qua BLE — app 0.3.0
+
+Nút **Hiệu chuẩn vòng tay** gửi ASCII `CALIBRATE` đến characteristic `c91b0003-7d7a-4f8c-9d29-6e44c786a321` (Read + Write + Notify, tối đa 20 byte). Firmware trả `CALIBRATING` khi bắt đầu và `READY` khi đã lấy đủ 100 mẫu đứng yên. App subscribe cả characteristic cử chỉ lẫn trạng thái, rồi đọc trạng thái hiện tại để không bỏ lỡ hiệu chuẩn khi mới kết nối. Các thao tác GATT được thực hiện tuần tự.
+
+Không thực hiện cử chỉ trong lúc hiệu chuẩn. Nếu thay cách đeo hoặc đổi tư thế tay trung tính, bấm nút này để lấy lại mốc. App chờ tối đa 30 giây; nếu chưa xong sẽ ngắt kết nối và hướng dẫn giữ yên/đổi tư thế để thử lại. Không có timer giả báo thành công: chỉ `READY` từ board mới báo hoàn tất.

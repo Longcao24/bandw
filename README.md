@@ -1,10 +1,10 @@
 # BandW — Android demo
 
-App Android native cho prototype vòng tay XIAO nRF52840 Sense. Bản 0.2.1 hỗ trợ mô phỏng và nhận BLE từ firmware rule-based trong thư mục `firmware/`. Không cần train AI.
+App Android native cho prototype vòng tay XIAO nRF52840 Sense. Bản 0.3.0 hỗ trợ mô phỏng và nhận BLE từ firmware rule-based trong thư mục `firmware/`. Không cần train AI.
 
 ## Tải và cài APK
 
-[Tải APK v0.2.1](https://github.com/Longcao24/bandw/releases/download/v0.2.1/BandW-0.2.1-debug.apk) · [Tất cả bản phát hành](https://github.com/Longcao24/bandw/releases)
+[Tải APK v0.3.0](https://github.com/Longcao24/bandw/releases/download/v0.3.0/BandW-0.3.0-debug.apk) · [Tất cả bản phát hành](https://github.com/Longcao24/bandw/releases)
 
 Mở link APK trên điện thoại Android 8.0+, tải xuống rồi mở file để cài. Nếu Android hỏi, cho phép trình duyệt hoặc ứng dụng quản lý file **Cài đặt ứng dụng không rõ nguồn gốc**. Đây là APK debug dành cho demo, chưa phát hành trên Play Store.
 
@@ -35,6 +35,10 @@ Gói ZIP trong Release gồm APK, mã nguồn firmware, binary và hướng dẫ
 Nạp firmware theo [hướng dẫn firmware](firmware/README.md). Bật Bluetooth, bấm **Kết nối vòng tay**, cấp quyền và chọn BandW-Sense sau khi quét. Android 8–11 cần quyền Vị trí và bật dịch vụ Vị trí để quét; Android 12+ cần quyền Thiết bị ở gần. Không sử dụng microphone.
 
 App chỉ nhận BLE khi mở ở foreground. Rời app, khóa hoặc xoay màn hình sẽ ngắt kết nối; bấm Kết nối để nối lại. Nút mô phỏng vẫn hoạt động khi không có vòng tay.
+
+## Hiệu chuẩn từ app
+
+Sau khi kết nối, bấm **Hiệu chuẩn vòng tay**, giữ tay ở tư thế trung tính khoảng 2 giây và chờ **Đã hiệu chuẩn**. Trong lúc hiệu chuẩn, board tạm ngừng nhận cử chỉ. Nếu quá 30 giây chưa xong, app báo lỗi và ngắt kết nối để thử lại. Firmware cũ vẫn nhận cử chỉ nhưng nút hiệu chuẩn bị tắt; cần nạp firmware mới đi kèm v0.3.0.
 
 ## Cấu trúc
 

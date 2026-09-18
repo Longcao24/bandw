@@ -6,6 +6,7 @@
 // Custom BandW service; Android uses the same UUIDs. One notification = one ASCII command.
 BLEService gestureService("c91b0001-7d7a-4f8c-9d29-6e44c786a321");
 BLEStringCharacteristic gestureCharacteristic("c91b0002-7d7a-4f8c-9d29-6e44c786a321", BLERead | BLENotify, 8);
+BLEStringCharacteristic controlCharacteristic("c91b0003-7d7a-4f8c-9d29-6e44c786a321", BLERead | BLEWrite | BLENotify, 20);
 LSM6DS3 imu(I2C_MODE, 0x6A);
 GestureDetector detector;
 const uint32_t SAMPLE_MS = 20;
@@ -19,6 +20,7 @@ float sumX = 0, sumZ = 0, previousX = 0, previousY = 0, previousZ = 0;
 void resetCalibration() {
     calibrated = false; calibrationCount = 0; sumX = sumZ = 0;
     detector.disarm();
+    controlCharacteristic.writeValue("CALIBRATING");
     Serial.println("CALIBRATE: hold wrist still in your neutral pose for 2 seconds.");
 }
 void fatal(const char* message) {
@@ -43,6 +45,7 @@ void setup() {
     BLE.setDeviceName("BandW-Sense");
     BLE.setAdvertisedService(gestureService);
     gestureService.addCharacteristic(gestureCharacteristic);
+    gestureService.addCharacteristic(controlCharacteristic);
     BLE.addService(gestureService);
     gestureCharacteristic.writeValue("");
     BLE.advertise();
@@ -51,6 +54,7 @@ void setup() {
 }
 void loop() {
     BLE.poll();
+    if (controlCharacteristic.written() && controlCharacteristic.value() == "CALIBRATE") resetCalibration();
     if (Serial.available()) {
         char input = Serial.read();
         if (input == 'c' || input == 'C') resetCalibration();
@@ -91,6 +95,7 @@ void loop() {
         if (++calibrationCount >= 100) {
             detector.calibrate(sumX / calibrationCount, sumZ / calibrationCount, now);
             calibrated = true;
+            controlCharacteristic.writeValue("READY");
             Serial.println("CALIBRATED: tilt left=WATER, right=FOOD, shake=NO.");
         }
         return;

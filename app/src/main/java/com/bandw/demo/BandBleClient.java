@@ -22,8 +22,9 @@ final class BandBleClient {
     static final int PERMISSIONS = 71;
     static final UUID SERVICE = UUID.fromString("c91b0001-7d7a-4f8c-9d29-6e44c786a321");
     static final UUID COMMAND = UUID.fromString("c91b0002-7d7a-4f8c-9d29-6e44c786a321");
+    static final UUID CONTROL = UUID.fromString("c91b0003-7d7a-4f8c-9d29-6e44c786a321");
     private static final UUID CCCD = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
-    interface Listener { void status(String text); void command(String command); }
+    interface Listener { void status(String text); void command(String command); void calibration(boolean enabled, String text); }
     private final Activity activity;
     private final Listener listener;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -32,7 +33,9 @@ final class BandBleClient {
     private ScanCallback scan;
     private BluetoothGatt gatt;
     private AlertDialog picker;
-    private boolean ready;
+    private boolean ready, calibrationAvailable, calibrating;
+    private Runnable calibrationTimeout;
+    private BluetoothGattCharacteristic control;
     private int generation;
     private Runnable timeout;
 
@@ -148,28 +151,50 @@ final class BandBleClient {
                                 || !source.setCharacteristicNotification(characteristic, true)) {
                             disconnect("Firmware không tương thích. Hãy nạp firmware BandW-Sense."); return;
                         }
-                        boolean queued;
-                        if (Build.VERSION.SDK_INT >= 33) queued = source.writeDescriptor(descriptor, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE) == BluetoothStatusCodes.SUCCESS;
-                        else {
-                            descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-                            queued = source.writeDescriptor(descriptor);
-                        }
-                        if (!queued) disconnect("Không đăng ký được cử chỉ. Hãy kết nối lại.");
+                        if (!subscribe(source, characteristic)) disconnect("Không đăng ký được cử chỉ. Hãy kết nối lại.");
                     });
                 }
                 @Override public void onDescriptorWrite(BluetoothGatt source, BluetoothGattDescriptor descriptor, int status) {
                     dispatch(source, () -> {
                         if (!CCCD.equals(descriptor.getUuid())) return;
                         if (status != BluetoothGatt.GATT_SUCCESS) { disconnect("Không bật được thông báo BLE. Hãy thử lại."); return; }
+                        if (COMMAND.equals(descriptor.getCharacteristic().getUuid())) {
+                            control = source.getService(SERVICE).getCharacteristic(CONTROL);
+                            if (control != null && (control.getProperties() & BluetoothGattCharacteristic.PROPERTY_WRITE) != 0) {
+                                if (!subscribe(source, control)) disconnect("Không nhận được trạng thái hiệu chuẩn. Hãy kết nối lại.");
+                                return;
+                            }
+                        }
                         ready = true;
                         if (timeout != null) handler.removeCallbacks(timeout);
-                        listener.status("● Đã kết nối BandW-Sense · Sẵn sàng nhận cử chỉ");
+                        listener.status("● Đã kết nối BandW-Sense");
+                        calibrationAvailable = CONTROL.equals(descriptor.getCharacteristic().getUuid());
+                        if (calibrationAvailable) {
+                            listener.calibration(false, "Đang đọc trạng thái vòng tay…");
+                            if (!source.readCharacteristic(control)) disconnect("Không đọc được trạng thái hiệu chuẩn.");
+                        } else listener.calibration(false, "Cần cập nhật firmware để hiệu chuẩn từ app.");
                     });
                 }
                 private void notification(BluetoothGatt source, BluetoothGattCharacteristic characteristic, byte[] value) {
-                    if (!COMMAND.equals(characteristic.getUuid()) || value == null) return;
+                    if (value == null) return;
                     final String command = new String(value, StandardCharsets.US_ASCII);
-                    dispatch(source, () -> { if (ready && GestureCommand.parse(command) != null) listener.command(command); });
+                    dispatch(source, () -> {
+                        if (CONTROL.equals(characteristic.getUuid())) { calibrationState(command); return; }
+                        if (ready && !calibrating && COMMAND.equals(characteristic.getUuid()) && GestureCommand.parse(command) != null) listener.command(command);
+                    });
+                }
+                @Override public void onCharacteristicRead(BluetoothGatt source, BluetoothGattCharacteristic characteristic, byte[] value, int status) {
+                    if (status == BluetoothGatt.GATT_SUCCESS) notification(source, characteristic, value);
+                    else dispatch(source, () -> disconnect("Không đọc được trạng thái hiệu chuẩn. Hãy kết nối lại."));
+                }
+                @Override public void onCharacteristicRead(BluetoothGatt source, BluetoothGattCharacteristic characteristic, int status) {
+                    if (Build.VERSION.SDK_INT < 33) onCharacteristicRead(source, characteristic, characteristic.getValue(), status);
+                }
+                @Override public void onCharacteristicWrite(BluetoothGatt source, BluetoothGattCharacteristic characteristic, int status) {
+                    dispatch(source, () -> {
+                        if (CONTROL.equals(characteristic.getUuid()) && status != BluetoothGatt.GATT_SUCCESS)
+                            disconnect("Gửi lệnh hiệu chuẩn thất bại. Hãy kết nối lại.");
+                    });
                 }
                 @Override public void onCharacteristicChanged(BluetoothGatt source, BluetoothGattCharacteristic characteristic, byte[] value) {
                     notification(source, characteristic, value);
@@ -183,9 +208,53 @@ final class BandBleClient {
             handler.postDelayed(timeout, 15000);
         } catch (SecurityException | IllegalStateException e) { disconnect("Không kết nối được vòng tay. Kiểm tra Bluetooth và quyền truy cập."); }
     }
+    private boolean subscribe(BluetoothGatt source, BluetoothGattCharacteristic characteristic) {
+        BluetoothGattDescriptor descriptor = characteristic.getDescriptor(CCCD);
+        if (descriptor == null || !source.setCharacteristicNotification(characteristic, true)) return false;
+        if (Build.VERSION.SDK_INT >= 33)
+            return source.writeDescriptor(descriptor, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE) == BluetoothStatusCodes.SUCCESS;
+        descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+        return source.writeDescriptor(descriptor);
+    }
+    private void calibrationState(String state) {
+        if (!calibrationAvailable) return;
+        if ("READY".equals(state)) {
+            calibrating = false;
+            if (calibrationTimeout != null) handler.removeCallbacks(calibrationTimeout);
+            listener.calibration(true, "Đã hiệu chuẩn · Có thể thực hiện cử chỉ");
+        } else if ("CALIBRATING".equals(state)) {
+            waitingForCalibration();
+        }
+    }
+    private void waitingForCalibration() {
+        calibrating = true;
+        listener.calibration(false, "Đang hiệu chuẩn — giữ tay yên ở tư thế trung tính trong 2 giây.");
+        if (calibrationTimeout != null) handler.removeCallbacks(calibrationTimeout);
+        calibrationTimeout = () -> disconnect("Chưa hiệu chuẩn được sau 30 giây. Giữ tay yên, đổi tư thế rồi kết nối lại.");
+        handler.postDelayed(calibrationTimeout, 30000);
+    }
+    void calibrate() {
+        if (!ready || !calibrationAvailable || calibrating || control == null) return;
+        waitingForCalibration();
+        byte[] value = "CALIBRATE".getBytes(StandardCharsets.US_ASCII);
+        try {
+            boolean queued;
+            if (Build.VERSION.SDK_INT >= 33)
+                queued = gatt.writeCharacteristic(control, value, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT) == BluetoothStatusCodes.SUCCESS;
+            else {
+                control.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
+                control.setValue(value);
+                queued = gatt.writeCharacteristic(control);
+            }
+            if (!queued) disconnect("Không gửi được lệnh hiệu chuẩn. Hãy kết nối lại.");
+        } catch (SecurityException | IllegalStateException e) { disconnect("Bluetooth bị ngắt khi gửi lệnh hiệu chuẩn."); }
+    }
     void disconnect(String status) {
         generation++;
         ready = false;
+        calibrationAvailable = false; calibrating = false; control = null;
+        if (calibrationTimeout != null) handler.removeCallbacks(calibrationTimeout);
+        listener.calibration(false, "Kết nối vòng tay để hiệu chuẩn.");
         stopScan();
         if (picker != null) { picker.dismiss(); picker = null; }
         BluetoothGatt old = gatt;

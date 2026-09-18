@@ -30,7 +30,8 @@ public class MainActivity extends Activity {
     private GestureCommand current;
     private boolean speechReady, destroyed, autoSpeak = true;
     private BandBleClient ble;
-    private TextView connectionStatus;
+    private TextView connectionStatus, calibrationStatus;
+    private Button calibrate;
     private int speechGeneration;
     private String activeUtterance;
 
@@ -46,6 +47,11 @@ public class MainActivity extends Activity {
         buildScreen();
         ble = new BandBleClient(this, new BandBleClient.Listener() {
             public void status(String value) { connectionStatus.setText(value); }
+            public void calibration(boolean enabled, String value) {
+                calibrate.setEnabled(enabled);
+                calibrate.setAlpha(enabled ? 1f : 0.45f);
+                calibrationStatus.setText(value);
+            }
             public void command(String value) { receiveCommand(value, "Vòng tay"); }
         });
         initSpeech();
@@ -84,6 +90,12 @@ public class MainActivity extends Activity {
         connectionStatus = mode;
         add(connectionPanel, button("Kết nối vòng tay", "#D5F28B", () -> ble.start()), 10);
         add(connectionPanel, button("Ngắt kết nối", "#FFFFFF", () -> ble.disconnect("Đã ngắt kết nối · Có thể dùng mô phỏng")), 6);
+        calibrate = button("Hiệu chuẩn vòng tay", "#D5F28B", () -> { stopSpeech(); ble.calibrate(); });
+        calibrate.setEnabled(false); calibrate.setAlpha(0.45f);
+        add(connectionPanel, calibrate, 6);
+        calibrationStatus = text("Kết nối vòng tay để hiệu chuẩn.", 13, false);
+        calibrationStatus.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        add(connectionPanel, calibrationStatus, 6);
 
         LinearLayout message = column();
         message.setPadding(dp(22), dp(22), dp(22), dp(22));
