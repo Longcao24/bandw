@@ -4,7 +4,7 @@ App Android native cho prototype vòng tay XIAO nRF52840 Sense. Bản 0.3.0 hỗ
 
 ## Nạp firmware từ trình duyệt
 
-[BandW Web Flasher](https://longcao24.github.io/bandw/) — dành cho XIAO nRF52840 Sense Plus, dùng Chrome/Edge trên máy tính. Trang tự gửi yêu cầu chuyển sang bootloader qua USB, sau đó bạn chọn cổng mới và bấm Nạp. Không cần Arduino IDE hoặc nhấn Reset khi firmware hiện tại hỗ trợ 1200-baud touch; Reset hai lần chỉ là phương án khôi phục.
+[BandW Web Flasher](https://longcao24.github.io/bandw/) — dành cho XIAO nRF52840 Sense thường và Sense Plus (chọn đúng loại board), dùng Chrome/Edge trên máy tính. Trang tự gửi yêu cầu chuyển sang bootloader qua USB, sau đó bạn chọn cổng mới và bấm Nạp. Không cần Arduino IDE hoặc nhấn Reset khi firmware hiện tại hỗ trợ 1200-baud touch; Reset hai lần chỉ là phương án khôi phục.
 
 ## Tải và cài APK
 

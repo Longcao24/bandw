@@ -1,10 +1,9 @@
+import { BOARDS, portIds, matchesManifest } from './boards.mjs';
 import { DfuTransport, checkHash, validateImage, sleep } from './dfu.mjs';
 const $ = id => document.getElementById(id);
 const supported = isSecureContext && 'serial' in navigator;
-const bootPids = [0x0065, 0x0165];
-// This mbed Sense Plus build enumerates as generic Plus while running (0x8064).
-const appPids = [0x8064, 0x8065, 0x0064, 0x0164];
-const allPids = [...bootPids, ...appPids];
+let board = BOARDS.sense;
+let loadGeneration = 0;
 let image, selectedPort, flashing = false, busy = false, needBootPort = false;
 const logs = [];
 function log(message) {
@@ -16,6 +15,7 @@ function status(title, detail) { $('status-title').textContent = title; $('statu
 function updateControls() {
   $('connect').disabled = !supported || !image || busy || !$('model-confirm').checked;
   $('model-confirm').disabled = busy || !!selectedPort;
+  $('board-select').disabled = busy || !!selectedPort;
   $('connect').hidden = !!selectedPort || flashing;
   $('flash').hidden = !selectedPort || flashing;
   $('flash').disabled = busy;
@@ -34,24 +34,31 @@ async function fetchBytes(file, size) {
   return bytes;
 }
 async function loadFirmware() {
+  const generation = ++loadGeneration;
+  const requestedBoard = board;
+  image = null;
+  $('version').textContent = 'Đang tải…';
+  $('file-status').textContent = 'Đang kiểm tra SHA-256';
+  status('Đang chuẩn bị firmware…', requestedBoard.label);
+  updateControls();
   try {
-    const response = await fetch(new URL('./firmware/manifest.json', import.meta.url), { cache: 'no-cache' });
+    const response = await fetch(new URL(`./firmware/${requestedBoard.manifest}`, import.meta.url), { cache: 'no-cache' });
     if (!response.ok) throw new Error('Không tải được thông tin firmware.');
     const manifest = await response.json();
-    if (manifest.applicationOnly !== true || manifest.fqbn !== 'Seeeduino:mbed:xiaonRF52840SensePlus'
-        || manifest.firmware.file !== 'bandw-sense-plus.bin' || manifest.init.file !== 'bandw-sense-plus.dat')
-      throw new Error('Gói firmware không đúng board Sense Plus.');
+    if (!matchesManifest(requestedBoard, manifest)) throw new Error('Gói firmware không đúng loại board đã chọn.');
     const [firmware, init] = await Promise.all([
       fetchBytes(manifest.firmware.file, manifest.firmware.size), fetchBytes(manifest.init.file, manifest.init.size)
     ]);
     await Promise.all([checkHash(firmware, manifest.firmware.sha256), checkHash(init, manifest.init.sha256)]);
     validateImage(firmware, init);
+    if (generation !== loadGeneration) return;
     image = { firmware, init, manifest };
     $('version').textContent = `v${manifest.version}`;
     $('file-status').textContent = `SHA-256 đã kiểm tra · ${Math.round(firmware.length / 1024)} KB`;
-    log(`Firmware v${manifest.version}: SHA-256 và CRC16 hợp lệ.`);
+    log(`${requestedBoard.label} · Firmware v${manifest.version}: SHA-256 và CRC16 hợp lệ.`);
     status('Sẵn sàng kết nối vòng tay', 'Xác nhận loại board, cắm cáp USB và bấm Kết nối USB.');
   } catch (error) {
+    if (generation !== loadGeneration) return;
     $('file-status').textContent = 'Chưa xác minh được firmware';
     status('Không tải được firmware', errorMessage(error)); log(errorMessage(error));
     $('retry').textContent = 'Tải lại trang'; $('retry').hidden = false;
@@ -63,16 +70,29 @@ $('compatibility').textContent = supported
   : 'Trình duyệt này chưa hỗ trợ. Hãy mở trang bằng Chrome hoặc Edge trên máy tính qua HTTPS.';
 $('compatibility').classList.toggle('error', !supported);
 $('model-confirm').addEventListener('change', updateControls);
+$('board-select').addEventListener('change', () => {
+  if (busy || selectedPort) return;
+  board = BOARDS[$('board-select').value];
+  needBootPort = false;
+  $('model-confirm').checked = false;
+  $('device-name').textContent = board.label;
+  $('confirm-name').textContent = board.label;
+  $('visual-name').textContent = board.label;
+  $('connect').textContent = 'Kết nối USB ↗';
+  $('retry').hidden = true; $('progress-wrap').hidden = true;
+  for (const id of ['step-connect', 'step-flash', 'step-done']) $(id).classList.toggle('active', id === 'step-connect');
+  loadFirmware();
+});
 $('connect').addEventListener('click', async () => {
   if (busy || !image || !$('model-confirm').checked) return;
   busy = true; updateControls(); $('retry').hidden = true;
   try {
-    const pids = needBootPort ? bootPids : allPids;
+    const pids = portIds(board, needBootPort);
     const port = await navigator.serial.requestPort({ filters: pids.map(usbProductId => ({ usbVendorId: 0x2886, usbProductId })) });
     const { usbVendorId, usbProductId } = port.getInfo();
-    if (usbVendorId !== 0x2886 || !pids.includes(usbProductId)) throw new Error('Cổng không đúng XIAO Sense Plus.');
+    if (usbVendorId !== 0x2886 || !pids.includes(usbProductId)) throw new Error('Cổng không đúng loại board đã chọn.');
     log(`Đã chọn USB ${usbVendorId.toString(16)}:${usbProductId.toString(16).padStart(4, '0')}.`);
-    if (bootPids.includes(usbProductId)) {
+    if (board.bootPids.includes(usbProductId)) {
       selectedPort = port; needBootPort = false;
       status('Đã chọn cổng nạp', 'Bấm Nạp BandW vào vòng tay. Giữ cáp USB và tab này mở cho đến khi hoàn tất.');
       $('step-connect').classList.remove('active'); $('step-flash').classList.add('active');
@@ -89,7 +109,7 @@ $('connect').addEventListener('click', async () => {
       await sleep(1800);
       needBootPort = true;
       $('connect').textContent = 'Chọn cổng nạp mới ↗';
-      status('Chọn cổng USB vừa xuất hiện', 'Board đã nhận yêu cầu vào chế độ nạp. Bấm bên dưới và chọn cổng Sense Plus mới để tiếp tục.');
+      status('Chọn cổng USB vừa xuất hiện', 'Đã gửi yêu cầu vào chế độ nạp. Bấm bên dưới và chọn cổng XIAO mới để tiếp tục. Nếu board mới không hiện cổng, nhấn Reset hai lần.');
       $('connection-hint').textContent = 'Chrome cần bạn cấp quyền cho cổng mới. Không cần nhấn Reset nếu cổng đã hiện.';
       log('Đã gửi yêu cầu bootloader bằng 1200 baud + DTR. Chờ chọn cổng mới.');
     }

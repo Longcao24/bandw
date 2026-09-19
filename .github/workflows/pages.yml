@@ -28,7 +28,7 @@ jobs:
       - name: Prepare static files
         run: |
           mkdir -p site/firmware
-          cp web/index.html web/style.css web/app.mjs web/dfu.mjs web/favicon.svg web/LICENSE-NORDIC.txt site/
+          cp web/index.html web/style.css web/app.mjs web/boards.mjs web/dfu.mjs web/favicon.svg web/LICENSE-NORDIC.txt site/
           cp web/firmware/* site/firmware/
       - uses: actions/upload-pages-artifact@v3
         with:
