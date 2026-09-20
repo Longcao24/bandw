@@ -26,7 +26,9 @@ public class MainActivity extends Activity {
     private final ArrayList<String> history = new ArrayList<>();
     private TextToSpeech speech;
     private TextView phraseView, commandView, speechStatus, historyView;
-    private Button replay, stop;
+    private Button replay, stop, demoToggle;
+    private LinearLayout demoPanel, devicePanel;
+    private boolean demoMode;
     private GestureCommand current;
     private boolean speechReady, destroyed, autoSpeak = true;
     private BandBleClient ble;
@@ -40,6 +42,7 @@ public class MainActivity extends Activity {
         setVolumeControlStream(android.media.AudioManager.STREAM_MUSIC);
         autoSpeak = getPreferences(MODE_PRIVATE).getBoolean("autoSpeak", true);
         if (state != null) {
+            demoMode = state.getBoolean("demoMode", false);
             current = GestureCommand.parse(state.getString("command"));
             ArrayList<String> saved = state.getStringArrayList("history");
             if (saved != null) history.addAll(saved);
@@ -52,7 +55,7 @@ public class MainActivity extends Activity {
                 calibrate.setAlpha(enabled ? 1f : 0.45f);
                 calibrationStatus.setText(value);
             }
-            public void command(String value) { receiveCommand(value, "Vòng tay"); }
+            public void command(String value) { if (!demoMode) receiveCommand(value, "Vòng tay"); }
         });
         initSpeech();
     }
@@ -78,24 +81,27 @@ public class MainActivity extends Activity {
         setContentView(root);
         root.requestApplyInsets();
 
-        TextView brand = text("bandw   /   VÒNG TAY GIAO TIẾP", 13, true);
-        brand.setTextColor(Color.parseColor("#215C47"));
-        connectionPanel.addView(brand);
-        add(page, text("Một cử chỉ.\nMột lời nói.", 34, true), 18);
-        add(page, text("Chạm để mô phỏng điều bạn muốn nói.", 16, false), 8);
-        TextView mode = text("●  CHẾ ĐỘ MÔ PHỎNG  ·  Chưa kết nối vòng tay", 12, true);
-        mode.setPadding(dp(14), dp(12), dp(14), dp(12));
-        mode.setBackground(background("#E8EDDF", 14));
-        add(connectionPanel, mode, 10);
-        connectionStatus = mode;
-        add(connectionPanel, button("Kết nối vòng tay", "#D5F28B", () -> ble.start()), 10);
-        add(connectionPanel, button("Ngắt kết nối", "#FFFFFF", () -> ble.disconnect("Đã ngắt kết nối · Có thể dùng mô phỏng")), 6);
-        calibrate = button("Hiệu chuẩn vòng tay", "#D5F28B", () -> { stopSpeech(); ble.calibrate(); });
+        LinearLayout toolbar = new LinearLayout(this);
+        toolbar.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        demoToggle = button("Demo", "#E8EDDF", this::toggleDemo);
+        toolbar.addView(demoToggle);
+        TextView brand = text("bandw", 24, true);
+        brand.setGravity(android.view.Gravity.END);
+        toolbar.addView(brand, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        connectionPanel.addView(toolbar);
+
+        devicePanel = column();
+        add(page, devicePanel, 0);
+        connectionStatus = text("Chưa kết nối vòng tay", 15, false);
+        connectionStatus.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        devicePanel.addView(connectionStatus);
+        add(devicePanel, button("Kết nối vòng tay", "#D5F28B", () -> ble.start()), 12);
+        calibrate = button("Hiệu chuẩn", "#E8EDDF", () -> { stopSpeech(); ble.calibrate(); });
         calibrate.setEnabled(false); calibrate.setAlpha(0.45f);
-        add(connectionPanel, calibrate, 6);
-        calibrationStatus = text("Kết nối vòng tay để hiệu chuẩn.", 13, false);
+        add(devicePanel, calibrate, 8);
+        calibrationStatus = text("Kết nối rồi giữ tay yên để hiệu chuẩn.", 13, false);
         calibrationStatus.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
-        add(connectionPanel, calibrationStatus, 6);
+        add(devicePanel, calibrationStatus, 8);
 
         LinearLayout message = column();
         message.setPadding(dp(22), dp(22), dp(22), dp(22));
@@ -103,24 +109,40 @@ public class MainActivity extends Activity {
         TextView caption = text("LỜI NHẮN CỦA BẠN", 12, true);
         caption.setTextColor(Color.parseColor("#D5F28B"));
         message.addView(caption);
-        phraseView = text(current == null ? "Bạn muốn nói\nđiều gì?" : current.phrase, 29, true);
+        phraseView = text(current == null ? "Sẵn sàng\nlắng nghe." : current.phrase, 29, true);
         phraseView.setTextColor(Color.WHITE);
         phraseView.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         add(message, phraseView, 16);
-        commandView = text(current == null ? "Chọn một lệnh bên dưới để bắt đầu" : "Đã nhận: " + current.name(), 13, false);
+        commandView = text(current == null ? "Kết nối vòng tay để bắt đầu" : "Đã nhận: " + current.name(), 13, false);
         commandView.setTextColor(Color.parseColor("#E0EADD"));
         add(message, commandView, 14);
         replay = button("Đọc lại", "#D5F28B", () -> speakCurrent());
         replay.setEnabled(false);
         add(message, replay, 18);
         add(page, message, 16);
-        add(page, text("MÔ PHỎNG CỬ CHỈ", 12, true), 26);
+        demoPanel = column();
+        add(demoPanel, text("Chạm để thử cử chỉ", 18, true), 0);
+        add(demoPanel, text("Demo mode · Không nhận cử chỉ từ vòng tay", 13, false), 6);
         for (GestureCommand command : GestureCommand.values()) {
-            Button trigger = button(command.label + "   →   " + command.name(), command.color,
+            Button trigger = button(command.label, command.color,
                     () -> receiveCommand(command.name()));
-            trigger.setContentDescription("Simulate " + command.name() + ". " + command.phrase);
-            add(page, trigger, 10);
+            trigger.setContentDescription(command.label + ". " + command.phrase);
+            add(demoPanel, trigger, 10);
         }
+        add(page, demoPanel, 20);
+        speechStatus = text("Đang chuẩn bị giọng đọc tiếng Việt…", 13, false);
+        add(page, speechStatus, 16);
+        stop = button("Dừng đọc", "#E8EDDF", this::stopSpeech);
+        stop.setEnabled(false);
+        add(page, stop, 8);
+
+        LinearLayout settings = column();
+        settings.setVisibility(View.GONE);
+        Button settingsToggle = button("Tùy chọn", "#FFFFFF", () ->
+                settings.setVisibility(settings.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE));
+        add(page, settingsToggle, 20);
+        add(page, settings, 0);
+        add(settings, button("Ngắt kết nối vòng tay", "#FFFFFF", () -> ble.disconnect("Đã ngắt kết nối")), 8);
         Switch automatic = new Switch(this);
         automatic.setText("Tự động đọc khi nhận lệnh");
         automatic.setTextSize(16);
@@ -132,26 +154,40 @@ public class MainActivity extends Activity {
             getPreferences(MODE_PRIVATE).edit().putBoolean("autoSpeak", enabled).apply();
             if (!enabled) stopSpeech();
         });
-        add(page, automatic, 18);
-        speechStatus = text("Đang chuẩn bị giọng đọc tiếng Việt…", 14, false);
-        add(page, speechStatus, 6);
-        stop = button("Dừng đọc", "#E8EDDF", this::stopSpeech);
-        stop.setEnabled(false);
-        add(page, stop, 10);
-        add(page, button("Cài đặt giọng đọc", "#FFFFFF", () -> {
+        add(settings, automatic, 8);
+        add(settings, button("Cài đặt giọng đọc", "#FFFFFF", () -> {
             try { startActivity(new Intent("com.android.settings.TTS_SETTINGS")); }
             catch (ActivityNotFoundException e) {
                 try { startActivity(new Intent(android.provider.Settings.ACTION_SETTINGS)); }
                 catch (ActivityNotFoundException ignored) { speechStatus.setText("Hãy mở Cài đặt trên điện thoại để chọn giọng tiếng Việt."); }
             }
         }), 6);
-        add(page, button("Kiểm tra lại giọng đọc", "#FFFFFF", this::initSpeech), 6);
-        add(page, text("LỆNH GẦN ĐÂY", 12, true), 24);
+        add(settings, button("Kiểm tra lại giọng đọc", "#FFFFFF", this::initSpeech), 6);
+        add(settings, text("LỆNH GẦN ĐÂY", 12, true), 24);
         historyView = text("", 14, false);
         historyView.setLineSpacing(dp(8), 1);
-        add(page, historyView, 10);
+        add(settings, historyView, 10);
         renderHistory();
-        add(page, text("Demo 02 · XIAO nRF52840 Sense\nGiữ app mở để nhận cử chỉ từ vòng tay.", 12, false), 26);
+        applyMode();
+    }
+
+    private void toggleDemo() {
+        stopSpeech();
+        demoMode = !demoMode;
+        current = null;
+        replay.setEnabled(false);
+        applyMode();
+    }
+
+    private void applyMode() {
+        demoToggle.setText(demoMode ? "← Vòng tay" : "Demo");
+        demoToggle.setContentDescription(demoMode ? "Thoát Demo mode" : "Vào Demo mode");
+        demoPanel.setVisibility(demoMode ? View.VISIBLE : View.GONE);
+        devicePanel.setVisibility(demoMode ? View.GONE : View.VISIBLE);
+        if (current == null) {
+            phraseView.setText(demoMode ? "Bạn muốn nói\nđiều gì?" : "Sẵn sàng\nlắng nghe.");
+            commandView.setText(demoMode ? "Chọn một cử chỉ bên dưới" : "Thực hiện cử chỉ khi vòng tay đã kết nối");
+        }
     }
 
     /** Simulation and BLE use the same phrase and speech pipeline, on the main thread. */
@@ -161,7 +197,7 @@ public class MainActivity extends Activity {
         if (command == null) return;
         current = command;
         phraseView.setText(command.phrase);
-        commandView.setText("Đã nhận: " + command.name() + " · " + source);
+        commandView.setText(command.label + " · " + source);
         String time = new SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(new Date());
         history.add(0, time + "   ·   " + command.name() + " · " + source + "\n" + command.phrase);
         if (history.size() > 5) history.remove(history.size() - 1);
@@ -239,6 +275,7 @@ public class MainActivity extends Activity {
         super.onSaveInstanceState(state);
         if (current != null) state.putString("command", current.name());
         state.putStringArrayList("history", history);
+        state.putBoolean("demoMode", demoMode);
     }
     @Override public void onRequestPermissionsResult(int code, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(code, permissions, results);
