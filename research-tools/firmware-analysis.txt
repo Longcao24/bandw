@@ -1,0 +1,18 @@
+
+BANDW / FIRMWARE ANALYSIS
+Source: actual release binaries on disk
+
+Seeeduino:mbed:xiaonRF52840Sense
+  Binary: bandw-sense.bin
+  Size:   337,504 bytes / 329.59 KiB
+  SHA256: dcf55fa0b8e3f8da993e5e3af191d1e517e99976acdfe4a4441ece636dbb3e1d
+  Manifest integrity: PASS
+
+Seeeduino:mbed:xiaonRF52840SensePlus
+  Binary: bandw-sense-plus.bin
+  Size:   336,928 bytes / 329.03 KiB
+  SHA256: 60f190e7ed736322992fa9e0dac538a22737fa64e4c4ce8ad8d5039c0560e83b
+  Manifest integrity: PASS
+
+Both firmware files match their published SHA-256 hashes.
+This check verifies files, not gesture accuracy or physical flashing.
