@@ -1,0 +1,81 @@
+WEBVTT
+Kind: subtitles
+Language: vi
+
+1
+00:00:01.000 --> 00:00:03.006
+Hiệu chuẩn tư thế trung tính.
+
+2
+00:00:03.206 --> 00:00:06.245
+Mỗi người để tay nghỉ ở một góc khác nhau.
+
+3
+00:00:06.245 --> 00:00:08.694
+Có người hơi nghiêng sẵn 15°.
+
+4
+00:00:08.894 --> 00:00:16.770
+Nếu không hiệu chuẩn, chỉ cần nghiêng thêm
+7° là vượt ngưỡng 22°, dễ phát lệnh nhầm.
+
+5
+00:00:16.970 --> 00:00:24.165
+Vì vậy vòng tay ghi lại tư thế nghỉ: giữ
+yên tay khoảng 2 giây để lấy 100 mẫu.
+
+6
+00:00:24.365 --> 00:00:29.285
+Mẫu tốt khi gia tốc gần 1 g, tay xoay chậm
+hơn 20 °/s,
+
+7
+00:00:29.285 --> 00:00:32.976
+và gần với trung bình các mẫu trước.
+
+8
+00:00:33.176 --> 00:00:40.595
+Đủ 100 mẫu, vòng tay lấy trung bình và
+tính góc mốc: atan2 của x và z trung bình.
+
+9
+00:00:40.795 --> 00:00:44.779
+Nếu tay run nhẹ, vài mẫu bị loại nhưng vẫn
+đếm tiếp.
+
+10
+00:00:44.779 --> 00:00:48.033
+Vòng tay chịu được tối đa 10 mẫu rung.
+
+11
+00:00:48.233 --> 00:00:52.053
+Quá 10 mẫu rung thì bộ đếm bắt đầu lại từ
+đầu.
+
+12
+00:00:52.253 --> 00:00:56.726
+Hiệu chuẩn chạy khi bật nguồn, khi app gửi
+lệnh CALIBRATE,
+
+13
+00:00:56.726 --> 00:01:00.180
+hoặc sau 1 giây dữ liệu cảm biến bị lỗi.
+
+14
+00:01:00.380 --> 00:01:05.655
+Đèn LED nháy nhanh là đang hiệu chuẩn,
+nháy chậm là chờ app,
+
+15
+00:01:05.655 --> 00:01:09.036
+chớp ngắn mỗi 2 giây là sẵn sàng.
+
+16
+00:01:09.236 --> 00:01:12.196
+Xong, vòng tay báo READY cho app.
+
+17
+00:01:12.196 --> 00:01:16.800
+Từ giờ mọi góc đều đo so với mốc riêng của
+người đeo.
+

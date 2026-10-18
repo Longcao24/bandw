@@ -1,0 +1,182 @@
+{
+  "v-system-overview": {
+    "title": "Toàn cảnh BandW trong 90 giây",
+    "duration": 86.78,
+    "chapters": [
+      {
+        "t": 3,
+        "label": "Vấn đề"
+      },
+      {
+        "t": 15,
+        "label": "5 cử chỉ"
+      },
+      {
+        "t": 37,
+        "label": "Đường đi tín hiệu"
+      },
+      {
+        "t": 69,
+        "label": "Kết quả"
+      }
+    ]
+  },
+  "v-imu-tilt": {
+    "title": "Cảm biến IMU và góc nghiêng",
+    "duration": 107.48,
+    "chapters": [
+      {
+        "t": 3,
+        "label": "Gia tốc kế"
+      },
+      {
+        "t": 17,
+        "label": "Trọng lực"
+      },
+      {
+        "t": 35,
+        "label": "atan2"
+      },
+      {
+        "t": 78,
+        "label": "Con quay"
+      }
+    ]
+  },
+  "v-calibration": {
+    "title": "Hiệu chuẩn tư thế trung tính",
+    "duration": 79.5,
+    "chapters": [
+      {
+        "t": 2,
+        "label": "Vì sao cần"
+      },
+      {
+        "t": 16,
+        "label": "100 mẫu"
+      },
+      {
+        "t": 40,
+        "label": "Loại mẫu rung"
+      },
+      {
+        "t": 60,
+        "label": "Đèn LED"
+      }
+    ]
+  },
+  "v-gesture-state-machine": {
+    "title": "Máy trạng thái nhận dạng cử chỉ",
+    "duration": 119.8,
+    "chapters": [
+      {
+        "t": 3,
+        "label": "Trung tính → sẵn sàng"
+      },
+      {
+        "t": 22,
+        "label": "Giữ & phát"
+      },
+      {
+        "t": 33,
+        "label": "Nghỉ"
+      },
+      {
+        "t": 52,
+        "label": "Lắc 3 pha"
+      },
+      {
+        "t": 65,
+        "label": "Gõ 2 lần"
+      },
+      {
+        "t": 85,
+        "label": "Nhấp cẳng tay"
+      }
+    ]
+  },
+  "v-main-loop": {
+    "title": "Vòng lặp loop() mỗi 20 ms",
+    "duration": 79.34,
+    "chapters": [
+      {
+        "t": 3,
+        "label": "setup()"
+      },
+      {
+        "t": 12,
+        "label": "Mỗi vòng"
+      },
+      {
+        "t": 41,
+        "label": "Đọc – kiểm tra – gửi"
+      }
+    ]
+  },
+  "v-ble": {
+    "title": "Bluetooth Low Energy gửi \"WATER\"",
+    "duration": 102.05,
+    "chapters": [
+      {
+        "t": 3,
+        "label": "Quảng bá"
+      },
+      {
+        "t": 20,
+        "label": "Kết nối"
+      },
+      {
+        "t": 36,
+        "label": "Đăng ký"
+      },
+      {
+        "t": 51,
+        "label": "Thông báo"
+      }
+    ]
+  },
+  "v-app-tts": {
+    "title": "Ứng dụng nhận lệnh và đọc thành tiếng",
+    "duration": 58.37,
+    "chapters": [
+      {
+        "t": 3,
+        "label": "Nhận"
+      },
+      {
+        "t": 8,
+        "label": "Hiểu lệnh"
+      },
+      {
+        "t": 27,
+        "label": "Hiển thị"
+      },
+      {
+        "t": 34,
+        "label": "Đọc"
+      }
+    ]
+  },
+  "v-experiment": {
+    "title": "Thí nghiệm và ma trận nhầm lẫn",
+    "duration": 79.82,
+    "chapters": [
+      {
+        "t": 3,
+        "label": "Kịch bản thử"
+      },
+      {
+        "t": 29,
+        "label": "Đếm kết quả"
+      },
+      {
+        "t": 43,
+        "label": "Đọc ma trận"
+      },
+      {
+        "t": 64,
+        "label": "Hạn chế"
+      }
+    ]
+  }
+}

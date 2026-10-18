@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><title>v-experiment</title>
+<style>html,body{margin:0;background:#f7f8fa;overflow:hidden;width:1280px;height:720px}svg{display:block}</style></head>
+<body><svg id="stage" xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"></svg>
+<script type="module">
+import { makeScene, C, CMD, T, R, L, Ci, P, G, arrow, card, pill, chip, bubble, check, cross, burst, armFront,
+  appear, caption, ease, easeOut, clamp, seg, lerp, fmt } from './scene-lib.js';
+
+const G5 = ['WATER', 'FOOD', 'NO', 'YES', 'HELP'];
+// DEMO numbers only (minh hoạ) — rows: intended gesture; cols: detected + "Không nhận"
+const DEMO = [[18, 0, 0, 0, 0, 2], [1, 19, 0, 0, 0, 0], [0, 0, 17, 1, 0, 2], [0, 0, 1, 16, 0, 3], [0, 1, 0, 0, 16, 3]];
+const demoBadge = () => pill(640, 92, '⚠️ Số liệu minh hoạ, không phải kết quả thật', { size: 20, anchor: 'middle', fill: C.warnBg, ink: C.warn });
+
+function matrix(c, fillP, o = {}) {
+  const x0 = 250, y0 = 190, cw = 118, ch = 74; let g = '';
+  g += T(x0 + cw * 3, y0 - 52, 'Lệnh nhận được →', { size: 22, w: 700, anchor: 'middle', fill: C.muted });
+  g += T(x0 - 150, y0 - 14, 'Cử chỉ đã làm ↓', { size: 20, w: 700, fill: C.muted });
+  [...G5, 'Không nhận'].forEach((k, j) => g += T(x0 + j * cw + cw / 2, y0 - 14, k, { size: k.length > 6 ? 17 : 19, w: 700, anchor: 'middle', mono: j < 5 }));
+  G5.forEach((k, i) => g += chip(k, x0 - 70, y0 + i * ch + ch / 2, { size: 18 }));
+  const totalCells = 25 + 5; const shown = fillP * 5; // rows appear one by one
+  DEMO.forEach((row, i) => row.forEach((v, j) => { g += R(x0 + j * cw + 3, y0 + i * ch + 3, cw - 6, ch - 6, { r: 10, fill: C.surface, stroke: C.border, sw: 1.5 }); }));
+  DEMO.forEach((row, i) => {
+    const rp = clamp(shown - i); if (rp <= 0) return;
+    row.forEach((v, j) => {
+      const cx = x0 + j * cw, cy = y0 + i * ch; const diag = i === j;
+      const heat = v / 20; const val = Math.round(v * clamp(rp * 1.4));
+      let fill = v === 0 ? C.surface : diag ? `rgba(31,171,84,${0.15 + heat * 0.7})` : `rgba(229,72,77,${0.15 + heat * 2})`;
+      if (j === 5 && v) fill = `rgba(154,82,0,${0.12 + heat * 1.5})`;
+      const hl = (o.diag && diag) || (o.cell && o.cell[0] === i && o.cell[1] === j);
+      g += R(cx + 3, cy + 3, cw - 6, ch - 6, { r: 10, fill, stroke: hl ? (diag ? C.success : C.energy) : C.border, sw: hl ? 5 : 1.5 });
+      g += T(cx + cw / 2, cy + ch / 2 + 11, String(val), { size: 30, w: 700, anchor: 'middle', mono: true, fill: v ? C.text : '#b9bfca' });
+    });
+    if (o.acc) {
+      const ok = row[i], pct = Math.round(ok / 20 * 100); const hl = o.accRow === i;
+      g += G(R(x0 + 6 * cw + 20, y0 + i * ch + 8, 170, ch - 16, { r: 10, fill: hl ? C.primarySoft : C.surface2, stroke: hl ? C.primary : 'none', sw: 3 }) +
+        T(x0 + 6 * cw + 105, y0 + i * ch + ch / 2 + 10, `${ok}/20 = ${pct}%`, { size: 22, w: 700, anchor: 'middle', mono: true }), { op: o.acc });
+    }
+  });
+  if (o.acc) g += G(T(x0 + 6 * cw + 105, y0 - 14, 'Độ chính xác', { size: 19, w: 700, anchor: 'middle', fill: C.primary }), { op: o.acc });
+  return g;
+}
+
+makeScene({
+  id: 'v-experiment', title: 'Thí nghiệm và ma trận nhầm lẫn',
+  shots: [
+    { marks: ['why'], draw(c) {
+      let g = appear(card(80, 150, 520, 440, { r: 24 }) + T(110, 205, '💻 Kiểm thử trên máy tính', { size: 28, w: 700 }) + T(110, 240, 'gesture_test.cpp · dữ liệu tổng hợp', { size: 19, w: 600, fill: C.muted, mono: true }), seg(c.lt, 0, 0.5));
+      ['Nghiêng trái → WATER', 'Giữ tư thế không lặp lệnh', 'Giữ 200 ms: không phát', 'Lắc không sinh nghiêng', 'Một cú xoay ≠ lắc'].forEach((s, i) =>
+        g += appear(G(check(130, 290 + i * 56, 0.6) + T(160, 298 + i * 56, s, { size: 22, w: 600 })), seg(c.lt, 0.6 + i * 0.4, 1 + i * 0.4)));
+      g += appear(card(680, 150, 520, 440, { r: 24 }) + T(710, 205, '🙋 Trên tay người thật', { size: 28, w: 700 }) + T(940, 400, '?', { size: 160, w: 700, anchor: 'middle', fill: C.warn }) +
+        T(940, 520, 'Chưa đo → cần thí nghiệm', { size: 26, w: 700, anchor: 'middle', fill: C.warn }), seg(c.lt, 3, 3.6));
+      return g;
+    } },
+    { marks: ['protocol', 'record', 'idle'], draw(c) {
+      const pr = c.m('protocol'), rc = c.m('record'), id = c.m('idle'); let g = '';
+      if (!rc.after) {
+        const steps = ['① Hiệu chuẩn', '② Mỗi cử chỉ 20 lần', '③ Thứ tự xáo trộn'];
+        steps.forEach((s, i) => g += appear(pill(220 + i * 420, 170, s, { size: 28, anchor: 'middle', w: 360, fill: C.surface, ink: C.primary, stroke: C.primary, sw: 2 }), seg(pr.lt, 0.3 + i * 1.3, 0.7 + i * 1.3)));
+        // shuffle animation: ordered sequence → shuffled sequence
+        const seq = []; for (let r = 0; r < 2; r++) for (const k of G5) seq.push(k);
+        const perm = [3, 7, 0, 9, 5, 1, 8, 4, 6, 2];
+        const u = ease(seg(pr.lt, 3.6, 5.2));
+        seq.forEach((k, i) => {
+          const a = [140 + (i % 5) * 220, 300 + Math.floor(i / 5) * 90], j = perm[i], b = [140 + (j % 5) * 220, 300 + Math.floor(j / 5) * 90];
+          const lift = Math.sin(u * Math.PI) * 40 * (i % 2 ? 1 : -1);
+          g += G(chip(k, lerp(a[0], b[0], u), lerp(a[1], b[1], u) + lift, { size: 24 }), { op: seg(pr.lt, 2.6, 3.2) });
+        });
+        g += appear(T(640, 530, 'Tránh thói quen và mỏi tay làm lệch kết quả', { size: 26, w: 600, anchor: 'middle', fill: C.muted }), seg(pr.lt, 5.2, 5.8));
+        return g;
+      }
+      if (!id.after) {
+        g += demoBadge();
+        const cols = [['Lần', 80], ['Định làm', 200], ['App nhận', 200], ['Thời điểm', 180], ['Ghi chú', 340]];
+        let x = 120; const y = 150;
+        g += R(100, y, 1080, 56, { r: 12, fill: C.text });
+        cols.forEach(([h, w]) => { g += T(x, y + 37, h, { size: 22, w: 700, fill: '#fff' }); x += w; });
+        const rows = [['1', 'YES', 'YES', '09:01:12', ''], ['2', 'WATER', 'WATER', '09:01:20', ''], ['3', 'HELP', '—', '09:01:31', 'nhấp chậm quá'], ['4', 'NO', 'NO', '09:01:40', ''], ['5', 'FOOD', '—', '09:01:49', 'nghiêng nhẹ quá']];
+        rows.forEach((r, i) => {
+          const e = easeOut(seg(rc.lt, 0.5 + i * 0.8, 0.9 + i * 0.8)); let xx = 120; const yy = y + 66 + i * 64;
+          let row = R(100, yy, 1080, 56, { r: 10, fill: r[1] !== r[2] ? C.dangerBg : C.surface, stroke: C.border, sw: 1 });
+          r.forEach((v, j) => { row += T(xx, yy + 37, v, { size: 22, w: j === 1 || j === 2 ? 700 : 500, mono: j > 0 && j < 4 }); xx += cols[j][1]; });
+          g += G(row, { op: e, tx: (1 - e) * 40 });
+        });
+        return g;
+      }
+      g += demoBadge();
+      g += armFront(330, 420, 6 * Math.sin(c.t * 1.3), { s: 0.8 });
+      g += T(330, 600, 'Sinh hoạt bình thường: không làm cử chỉ', { size: 24, w: 700, anchor: 'middle' });
+      const mins = Math.min(5, id.lt * 0.9);
+      g += card(720, 200, 440, 300, { r: 24 }) + T(750, 255, '⏱ Phiên 5 phút', { size: 28, w: 700 }) + T(750, 310, `${fmt(mins, 1)} / 5 phút`, { size: 26, w: 600, mono: true, fill: C.muted });
+      const fp = id.lt > 3.2 ? 1 : 0;
+      g += T(750, 400, 'Lệnh phát nhầm:', { size: 26, w: 700 }) + T(1130, 400, String(fp), { size: 44, w: 700, anchor: 'end', mono: true, fill: fp ? C.danger : C.text });
+      g += T(750, 455, '(dương tính giả · false positive)', { size: 19, w: 500, fill: C.muted });
+      return g;
+    } },
+    { marks: ['matrix', 'fill', 'diag', 'acc', 'offdiag'], draw(c) {
+      const mx = c.m('matrix'), fl = c.m('fill'), dg = c.m('diag'), ac = c.m('acc'), od = c.m('offdiag');
+      const fillP = fl.after ? clamp(fl.p / 0.9) : 0.0;
+      let g = demoBadge();
+      g += matrix(c, mx.after && !fl.after ? 0 : fillP, { diag: dg.after && !ac.after, acc: ac.after ? easeOut(seg(ac.lt, 0.3, 0.9)) : 0, accRow: ac.after && !od.after ? 0 : -1, cell: od.after ? [4, 5] : null });
+      if (!fl.after) g += appear(T(640, 640, 'Hàng = cử chỉ đã làm · Cột = lệnh nhận được', { size: 28, w: 700, anchor: 'middle' }), seg(mx.lt, 0.5, 1));
+      if (dg.after && !ac.after) g += appear(T(640, 640, '✓ Đường chéo = nhận đúng · ô khác = nhầm', { size: 28, w: 700, anchor: 'middle', fill: C.success }), seg(dg.lt, 0.3, 0.8));
+      if (ac.after && !od.after) g += appear(T(640, 640, 'Tổng: 86/100 = 86% (minh hoạ)', { size: 28, w: 700, anchor: 'middle', fill: C.primary }), seg(ac.lt, 3, 3.5));
+      if (od.after) g += appear(T(640, 640, 'HELP → Không nhận: 3 lần → nhấp chậm quá 700 ms?', { size: 28, w: 700, anchor: 'middle', fill: C.warn }), seg(od.lt, 0.5, 1));
+      return g;
+    } },
+    { marks: ['limits', 'honest'], draw(c) {
+      const lm = c.m('limits'), hn = c.m('honest'); let g = '';
+      if (!hn.after) {
+        g += T(640, 150, 'Báo cáo trung thực', { size: 40, w: 700, anchor: 'middle' });
+        ['Điều kiện đo: ngồi hay nằm, tay nào, đeo thế nào', 'Số người thử và số lần mỗi cử chỉ', 'Cả những lần thất bại', 'Kiểm thử phần mềm ≠ thử trên người dùng'].forEach((s, i) =>
+          g += appear(G(R(190, 210 + i * 96, 900, 76, { r: 16, fill: C.surface, stroke: C.border, sw: 1.5, shadow: true }) + check(240, 248 + i * 96, 0.8) + T(285, 258 + i * 96, s, { size: 27, w: 600 })), seg(lm.lt, 0.3 + i * 0.9, 0.8 + i * 0.9)));
+        return g;
+      }
+      g += appear(bubble(110, 130, 520, 130, 'Độ chính xác bao nhiêu?', { size: 32 }), seg(hn.lt, 0, 0.5));
+      g += T(160, 330, '— Giám khảo', { size: 22, w: 600, fill: C.muted });
+      g += appear(card(620, 330, 560, 230, { r: 24, stroke: C.success, sw: 3 }) + check(670, 390, 0.9) + T(710, 400, 'Số đo thật của nhóm', { size: 30, w: 700, fill: C.success }) +
+        T(710, 450, '+ cách đo + điều kiện đo', { size: 26, w: 600 }) + cross(670, 510, 0.9) + T(710, 520, 'Không bịa số, không nói "100%"', { size: 26, w: 600, fill: C.danger }), seg(hn.lt, 1, 1.6));
+      return g;
+    } },
+  ],
+});
+</script></body></html>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Thư viện mô phỏng · BandW KHKT</title>
+  <meta name="robots" content="noindex">
+  <style>
+    /* fallback tokens (tokens.css overrides when present) */
+    :root { --c-bg:#f7f8fa; --c-surface:#fff; --c-surface-2:#f0f2f5; --c-border:#d6d8de; --c-text:#21242c; --c-muted:#5b616e; --c-text-on-light:#21242c;
+      --c-primary:#1865f2; --c-primary-ink:#fff; --c-primary-soft:#e8f0fe; --c-success:#0d7a35; --c-success-bg:#e3f5e8; --c-danger:#c4280f; --c-danger-bg:#fdecea;
+      --c-warn:#9a5200; --c-warn-bg:#fff3e0; --c-focus:#1865f2; --viz-x:#e5484d; --viz-y:#2f9e5b; --viz-z:#0b7ae0; --viz-g:#8e4ec6; --viz-enter:#d92916;
+      --viz-exit:#b35c00; --viz-neutral:rgba(47,158,91,.15); --viz-packet:#1865f2; --radius:12px; --font:'Be Vietnam Pro',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+      --mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace; --tap:44px; }
+  </style>
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/sims.css">
+  <style>
+    body { margin: 0; background: var(--c-bg); color: var(--c-text); font-family: var(--font); }
+    .g-wrap { max-width: 1000px; margin: 0 auto; padding: 16px; }
+    .g-top { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+    .g-top h1 { font-size: 26px; margin: 8px 0; }
+    .g-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .g-tools select, .g-tools button { min-height: 40px; font: inherit; border-radius: 8px; border: 1px solid var(--c-border); background: var(--c-surface); color: var(--c-text); padding: 0 10px; }
+    .g-toc { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 16px; padding: 0; list-style: none; }
+    .g-toc a { display: inline-block; padding: 4px 10px; border-radius: 999px; background: var(--c-surface-2); color: var(--c-text); text-decoration: none; font-size: 14px; }
+    .g-item { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 14px; padding: 14px; margin: 0 0 22px; }
+    .g-item h2 { font-size: 20px; margin: 0 0 4px; }
+    .g-item code { font-family: var(--mono); font-size: 13px; color: var(--c-muted); }
+    .g-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 10px; }
+    .g-picked { font-size: 14px; color: var(--c-muted); }
+    .g-err { color: var(--c-danger); white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <div class="g-wrap">
+    <div class="g-top">
+      <h1>Thư viện mô phỏng BandW</h1>
+      <div class="g-tools">
+        <label>Giao diện <select id="g-theme"><option value="">Tự động</option><option value="light">Sáng</option><option value="dark">Tối</option></select></label>
+        <label>Chuyển động <select id="g-motion"><option value="auto">Tự động</option><option value="reduce">Giảm chuyển động</option></select></label>
+      </div>
+    </div>
+    <p>Trang kiểm tra hình ảnh (QA): mỗi mô phỏng được gắn với props mẫu. Nút “Chế độ chọn vùng” thử các vùng bấm (hotspot).</p>
+    <ul class="g-toc" id="g-toc"></ul>
+    <div id="g-list"></div>
+  </div>
+  <script type="module" src="js/sims/_gallery.js"></script>
+</body>
+</html>

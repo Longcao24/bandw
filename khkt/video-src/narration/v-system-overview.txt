@@ -1,0 +1,72 @@
+# title: Toàn cảnh BandW trong 90 giây
+# Định dạng: "@mark | Nhãn chương" mở một đoạn (cue). Dòng thường = phụ đề (dùng chữ số).
+# Dòng "~ ..." = lời đọc cho giọng Linh (đọc số/thuật ngữ cho rõ). Dòng "!min 3.5" = thời lượng tối thiểu (giây).
+
+@intro
+Toàn cảnh BandW trong 90 giây.
+~ Toàn cảnh Band W trong chín mươi giây.
+
+@problem | Vấn đề
+Có những người không nói được, ví dụ sau đột quỵ, nhưng vẫn cử động được cổ tay.
+
+@idea
+BandW biến một cử động cổ tay thành một câu nói tiếng Việt trên điện thoại.
+~ Band W biến một cử động cổ tay thành một câu nói tiếng Việt trên điện thoại.
+
+@gestures | 5 cử chỉ
+Vòng tay hiểu năm cử chỉ, mỗi cử chỉ là một câu.
+
+@g-water
+Nghiêng tay trái: "Tôi muốn uống nước."
+~ Nghiêng tay trái. Tôi muốn uống nước.
+!min 3
+
+@g-food
+Nghiêng tay phải: "Tôi muốn ăn."
+~ Nghiêng tay phải. Tôi muốn ăn.
+!min 3
+
+@g-no
+Lắc cổ tay: "Không."
+~ Lắc cổ tay. Không.
+!min 3
+
+@g-yes
+Gõ nhẹ 2 lần: "Có."
+~ Gõ nhẹ hai lần. Có.
+!min 3
+
+@g-help
+Hạ cẳng tay rồi nâng lại, 2 lần: "Tôi cần giúp đỡ."
+~ Hạ cẳng tay rồi nâng lại, hai lần. Tôi cần giúp đỡ.
+!min 3
+
+@flow | Đường đi tín hiệu
+Hãy theo dõi một cử chỉ nghiêng trái đi qua cả hệ thống.
+
+@f-imu
+Cảm biến IMU trên bo mạch đo gia tốc và tốc độ xoay, 50 lần mỗi giây.
+~ Cảm biến I M U trên bo mạch đo gia tốc và tốc độ xoay, năm mươi lần mỗi giây.
+
+@f-mcu
+Chip nRF52840 so sánh số liệu với các ngưỡng và quyết định: đây là lệnh WATER.
+~ Chip n R F năm hai tám bốn không so sánh số liệu với các ngưỡng, và quyết định: đây là lệnh WATER.
+
+@f-ble
+Qua Bluetooth Low Energy, vòng tay chỉ gửi đúng một từ ngắn: WATER.
+
+@f-phone
+Ứng dụng Android tra bảng và hiện chữ lớn: "Tôi muốn uống nước."
+~ Ứng dụng Android tra bảng, và hiện chữ lớn: Tôi muốn uống nước.
+
+@f-speaker
+Rồi giọng đọc tiếng Việt phát câu đó ra loa.
+
+@result | Kết quả
+Mọi quyết định dựa trên luật rõ ràng, không dùng học máy, nên em giải thích được từng bước.
+
+@privacy
+Không dùng camera hay micro, và không cần máy chủ.
+
+@next
+Các bài tiếp theo sẽ mở từng khối ra xem bên trong.

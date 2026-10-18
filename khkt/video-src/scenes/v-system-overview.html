@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><title>v-system-overview</title>
+<style>html,body{margin:0;background:#f7f8fa;overflow:hidden;width:1280px;height:720px}svg{display:block}</style></head>
+<body><svg id="stage" xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"></svg>
+<script type="module">
+import { makeScene, C, CMD, T, R, L, Ci, P, G, arrow, card, pill, chip, bubble, para, armFront, phone, speaker, chipIcon, bleWaves, btGlyph,
+  packet, check, cross, burst, gestureFigure, appear, caption, ease, easeOut, clamp, seg, lerp, pop, fmt } from './scene-lib.js';
+
+const ORDER = ['WATER', 'FOOD', 'NO', 'YES', 'HELP'];
+const GNAME = { WATER: 'Nghiêng trái', FOOD: 'Nghiêng phải', NO: 'Lắc cổ tay', YES: 'Gõ 2 lần', HELP: 'Nhấp tay 2 lần' };
+
+function person(cx, cy, o = {}) {
+  let g = Ci(cx, cy - 120, 62, { fill: C.skin, stroke: C.skinDark, sw: 3 });
+  g += P(`M${cx - 120} ${cy + 120} q0 -130 120 -130 q120 0 120 130 z`, { fill: '#6b8cce' });
+  g += Ci(cx - 20, cy - 128, 6, { fill: C.text }) + Ci(cx + 20, cy - 128, 6, { fill: C.text });
+  g += o.sad ? L(cx - 16, cy - 92, cx + 16, cy - 92, { stroke: C.text, sw: 4 }) : P(`M${cx - 18} ${cy - 96} q18 14 36 0`, { stroke: C.text, sw: 4 });
+  return g;
+}
+function phoneScreen(cmd, w, h, u) {
+  if (!cmd) return T(w / 2, h / 2, 'BandW', { size: 26, w: 700, fill: C.muted, anchor: 'middle' });
+  const c = CMD[cmd]; const e = easeOut(u);
+  return G(R(16, 70, w - 32, 170, { r: 18, fill: c.color, stroke: c.ink, sw: 2 }) +
+    T(w / 2, 108, c.label, { size: 17, w: 600, fill: C.muted, anchor: 'middle' }) +
+    para(32, 160, c.phrase, { size: 30, w: 700, max: 12, lh: 38 }), { op: e, ty: (1 - e) * 16 });
+}
+
+// pipeline nodes
+const NODES = [
+  { id: 'wrist', label: 'Cổ tay', x: 120 }, { id: 'imu', label: 'IMU', x: 328 }, { id: 'mcu', label: 'nRF52840', x: 536 },
+  { id: 'ble', label: 'BLE', x: 744 }, { id: 'phone', label: 'Điện thoại', x: 952 }, { id: 'speaker', label: 'Loa', x: 1160 },
+];
+const PY = 330;
+function nodeIcon(id, x, y, t, active) {
+  if (id === 'wrist') return armFront(x, y + 20, active ? -32 : -32 * 0.0, { s: 0.42 });
+  if (id === 'imu') return chipIcon(x, y, 110, 84, 'IMU', { sub: 'LSM6DS3' });
+  if (id === 'mcu') return chipIcon(x, y, 130, 100, 'nRF', { sub: '52840', fill: '#1f5f8b' });
+  if (id === 'ble') return (active ? bleWaves(x, y, t, { maxR: 70 }) : '') + Ci(x, y, 40, { fill: C.packet }) + btGlyph(x, y, 1.1);
+  if (id === 'phone') return phone(x - 48, y - 80, 96, 160, active ? R(8, 50, 60, 40, { r: 8, fill: CMD.WATER.color }) + T(38, 76, 'Tôi…', { size: 15, w: 700, anchor: 'middle' }) : '');
+  return speaker(x - 20, y, 1, active ? 1 : 0, t);
+}
+const FORMS = {
+  wrist: ['Góc', '−35°'], imu: ['50 mẫu/giây', 'x −0,57 · z 0,82'], mcu: ['Quyết định', 'WATER'], ble: ['5 byte', '57 41 54 45 52'],
+  phone: ['Tra bảng', '"Tôi muốn uống nước."'], speaker: ['Giọng đọc', '🔊 vi-VN'],
+};
+function pipeline(c, activeIdx, travel) {
+  let g = '';
+  for (let i = 0; i < NODES.length - 1; i++) {
+    const done = i < activeIdx;
+    g += arrow(NODES[i].x + 70, PY, NODES[i + 1].x - 70, PY, { stroke: done ? C.primary : '#c3c8d2', sw: 5 });
+  }
+  NODES.forEach((n, i) => {
+    const act = i === activeIdx, past = i < activeIdx;
+    g += G(card(n.x - 92, PY - 110, 184, 220, { r: 22, stroke: act ? C.primary : C.border, sw: act ? 4 : 1.5 }) +
+      nodeIcon(n.id, n.x, PY - 14, c.t, act || past) +
+      T(n.x, PY + 92, n.label, { size: 24, w: 700, anchor: 'middle', fill: act ? C.primary : C.text }), { op: i <= activeIdx ? 1 : 0.4 });
+    if (i <= activeIdx) {
+      const [a, b] = FORMS[n.id]; const e = easeOut(act ? travel * 2 : 1);
+      g += G(R(n.x - 98, PY + 130, 196, 96, { r: 14, fill: act ? C.primarySoft : C.surface2 }) +
+        T(n.x, PY + 166, a, { size: 18, w: 600, fill: C.muted, anchor: 'middle' }) +
+        T(n.x, PY + 204, b, { size: n.id === 'phone' ? 16 : 22, w: 700, anchor: 'middle', mono: n.id === 'ble' || n.id === 'mcu', fill: n.id === 'mcu' ? C.success : C.text }), { op: e, ty: (1 - e) * 14 });
+    }
+  });
+  if (activeIdx > 0 && travel < 0.5) { // packet travelling into the active node
+    const a = NODES[activeIdx - 1], b = NODES[activeIdx]; const u = ease(travel / 0.5);
+    g += Ci(lerp(a.x + 70, b.x - 70, u), PY, 13, { fill: C.energy, stroke: '#fff', sw: 3 });
+  }
+  return g;
+}
+
+makeScene({
+  id: 'v-system-overview', title: 'Toàn cảnh BandW trong 90 giây',
+  shots: [
+    { marks: ['problem', 'idea'], draw(c) {
+      const idea = c.m('idea'); let g = '';
+      const shift = ease(seg(c.t, idea.start, idea.start + 0.8));
+      g += G(person(300, 360, { sad: !idea.after }), { tx: -shift * 120 });
+      if (!idea.after) {
+        const p = c.m('problem');
+        g += appear(bubble(400, 130, 200, 110, '…?', { size: 44 }), seg(c.t, p.start + 0.3, p.start + 0.9));
+        ['Sau đột quỵ', 'Bại não', 'Bệnh nằm viện'].forEach((s, i) => g += appear(pill(720, 260 + i * 80, s, { size: 26, fill: C.surface, ink: C.text, stroke: C.border, sw: 1.5 }), seg(c.t, p.start + 1 + i * 0.5, p.start + 1.5 + i * 0.5)));
+        g += appear(T(720, 520, 'Vẫn cử động được cổ tay ✓', { size: 30, w: 700, fill: C.success }), seg(c.t, p.start + 3, p.start + 3.6));
+      } else {
+        const u = idea.lt; const tilt = -34 * ease(seg(u, 0.8, 1.6));
+        g += G(armFront(420, 470, tilt, { s: 0.6 }), { op: shift });
+        const fly = seg(u, 1.8, 2.8);
+        g += arrow(560, 420, 820, 360, { stroke: C.primary, sw: 6, op: shift });
+        if (fly > 0 && fly < 1) g += chip('WATER', lerp(560, 820, ease(fly)), lerp(420, 360, ease(fly)) - 30, { size: 20 });
+        g += G(phone(860, 150, 280, 470, phoneScreen(u > 2.8 ? 'WATER' : null, 260, 440, seg(u, 2.8, 3.4))), { op: shift });
+        g += speaker(1180, 560, 0.7, u > 3.2 ? 1 : 0, c.t);
+        g += appear(caption('Cử động cổ tay → câu nói tiếng Việt', { y: 660, size: 28 }), seg(u, 0.4, 1));
+      }
+      return g;
+    } },
+    { marks: ['gestures', 'g-water', 'g-food', 'g-no', 'g-yes', 'g-help'], draw(c) {
+      let g = '';
+      const curIdx = ORDER.findIndex((k) => c.mark === 'g-' + k.toLowerCase());
+      // cards row
+      ORDER.forEach((k, i) => {
+        const x = 70 + i * 232, y = 470; const on = i === curIdx, done = curIdx > i;
+        const e = easeOut(seg(c.t, c.m('gestures').start + i * 0.25, c.m('gestures').start + i * 0.25 + 0.5));
+        g += G(card(x, y, 210, 170, { r: 20, fill: on ? CMD[k].color : C.surface, stroke: on ? CMD[k].ink : C.border, sw: on ? 4 : 1.5 }) +
+          G(gestureFigure(k, 0, 0, curIdx < 0 ? c.t : (on ? c.t : 0.0), 0.3), { tx: x + 105, ty: y + 82 }) +
+          T(x + 105, y + 132, GNAME[k], { size: 20, w: 700, anchor: 'middle' }) + chip(k, x + 105, y + 170, { size: 17 }) +
+          (done ? check(x + 190, y + 20, 0.7) : ''), { op: e * (curIdx >= 0 && !on ? 0.75 : 1), ty: (1 - e) * 30 });
+      });
+      if (curIdx < 0) {
+        g += appear(T(640, 250, '5 cử chỉ  →  5 câu nói', { size: 56, w: 700, anchor: 'middle' }), seg(c.lt, 0.2, 0.8));
+        g += appear(T(640, 320, 'Mỗi cử chỉ phát đúng một lệnh', { size: 28, w: 500, fill: C.muted, anchor: 'middle' }), seg(c.lt, 0.7, 1.3));
+      } else {
+        const k = ORDER[curIdx]; const mm = c.m('g-' + k.toLowerCase());
+        g += G(gestureFigure(k, 0, 0, mm.lt, 0.85), { tx: 330, ty: 290 });
+        g += appear(bubble(660, 150, 520, 150, CMD[k].phrase, { size: 40, fill: CMD[k].color, stroke: CMD[k].ink }), seg(mm.lt, 0.5, 1.0));
+        g += appear(T(680, 360, GNAME[k] + '  →  ', { size: 30, w: 700, fill: C.muted }) + chip(k, 1010, 350, { size: 26 }), seg(mm.lt, 0.2, 0.7));
+      }
+      return g;
+    } },
+    { marks: ['flow', 'f-imu', 'f-mcu', 'f-ble', 'f-phone', 'f-speaker'], draw(c) {
+      const order = ['flow', 'f-imu', 'f-mcu', 'f-ble', 'f-phone', 'f-speaker'];
+      const idx = order.indexOf(c.mark); const mm = c.m(c.mark);
+      let g = T(640, 140, 'Đường đi của một cử chỉ nghiêng trái', { size: 34, w: 700, anchor: 'middle' });
+      g += pipeline(c, idx, clamp(mm.lt / 1.2));
+      return g;
+    } },
+    { marks: ['result', 'privacy', 'next'], draw(c) {
+      const r = c.m('result'), p = c.m('privacy'), n = c.m('next'); let g = '';
+      if (!n.after) {
+        g += appear(card(90, 120, 520, 470, { r: 24 }) + T(130, 180, 'Dựa trên luật', { size: 34, w: 700, fill: C.primary }) +
+          T(130, 220, '(rule-based) · không học máy', { size: 22, w: 500, fill: C.muted }), seg(c.t, r.start, r.start + 0.6));
+        const rules = ['Nếu góc vượt 22°', 'và giữ đủ 250 ms', 'và trước đó đã về trung tính', '→ phát WATER'];
+        rules.forEach((s, i) => g += appear(G(R(130, 260 + i * 76, 440, 60, { r: 12, fill: i === 3 ? C.successBg : C.surface2 }) + T(150, 300 + i * 76, s, { size: 26, w: i === 3 ? 700 : 500, fill: i === 3 ? C.success : C.text })), seg(c.t, r.start + 0.8 + i * 0.6, r.start + 1.3 + i * 0.6)));
+        const items = [['📷', 'Không camera'], ['🎤', 'Không micro'], ['☁️', 'Không máy chủ']];
+        items.forEach(([ic, s], i) => {
+          const y = 170 + i * 140, e = seg(c.t, p.start + i * 0.6, p.start + 0.5 + i * 0.6);
+          g += appear(card(680, y - 40, 500, 110, { r: 20 }) + T(740, y + 34, ic, { size: 48, anchor: 'middle' }) +
+            L(712, y + 40, 768, y - 16, { stroke: C.danger, sw: 6 }) + T(800, y + 28, s, { size: 32, w: 700 }), e);
+        });
+      } else {
+        g += T(640, 160, 'Mở từng khối ra xem bên trong', { size: 40, w: 700, anchor: 'middle' });
+        const labels = ['Cảm biến IMU', 'Hiệu chuẩn', 'Máy trạng thái', 'Vòng lặp loop()', 'BLE', 'App & giọng đọc'];
+        labels.forEach((s, i) => g += appear(pill(240 + (i % 3) * 400, 300 + Math.floor(i / 3) * 120, s, { size: 30, w: 360, fill: C.surface, ink: C.primary, stroke: C.primary, sw: 2 }), seg(n.lt, 0.3 + i * 0.25, 0.8 + i * 0.25)));
+      }
+      return g;
+    } },
+  ],
+});
+</script></body></html>

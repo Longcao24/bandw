@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><title>v-app-tts</title>
+<style>html,body{margin:0;background:#f7f8fa;overflow:hidden;width:1280px;height:720px}svg{display:block}</style></head>
+<body><svg id="stage" xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"></svg>
+<script type="module">
+import { makeScene, C, CMD, T, R, L, Ci, P, G, arrow, card, pill, chip, phone, speaker, codePanel, check, cross, burst,
+  appear, caption, ease, easeOut, clamp, seg, lerp, fmt } from './scene-lib.js';
+
+const PARSE = [
+  'public static GestureCommand parse(String raw) {',
+  '    if (raw == null) return null;',
+  '    try { return valueOf(raw.trim().toUpperCase(Locale.ROOT)); }',
+  '    catch (IllegalArgumentException e) { return null; }',
+  '}',
+];
+const ENUM = [
+  'WATER("Tôi muốn uống nước.", "← Nghiêng tay trái", "#E4EFF9"),',
+  'FOOD("Tôi muốn ăn.", "→ Nghiêng tay phải", "#F6EFCF"),',
+  'NO("Không.", "↔ Lắc cổ tay", "#FCEAE5"),',
+  'YES("Có.", "✌ Gõ 2 lần", "#E3F2DF"),',
+  'HELP("Tôi cần giúp đỡ.", "↕ Hạ cẳng tay rồi nâng lại, 2 lần", "#F7C6C0");',
+];
+const box = (x, y, w, s, o = {}) => R(x, y, w, 64, { r: 14, fill: o.fill || C.surface, stroke: o.stroke || C.border, sw: 2, shadow: true }) + T(x + w / 2, y + 42, s, { size: o.size || 26, w: 700, anchor: 'middle', mono: o.mono !== false, fill: o.ink || C.text });
+function phoneApp(u, o = {}) {
+  const c = CMD[o.cmd || 'WATER']; let g = '';
+  const e = easeOut(u);
+  g += T(20, 64, 'BandW', { size: 20, w: 700, fill: C.primary });
+  g += G(R(14, 84, 252, 170, { r: 18, fill: c.color, stroke: c.ink, sw: 2 }) + T(30, 116, c.label + ' · Vòng tay', { size: 14, w: 600, fill: C.muted }) +
+    T(30, 170, c.phrase.split(' ').slice(0, 3).join(' '), { size: 30, w: 700 }) + T(30, 210, c.phrase.split(' ').slice(3).join(' '), { size: 30, w: 700 }), { op: e });
+  g += T(20, 290, 'Lịch sử (5 lệnh gần nhất)', { size: 14, w: 700, fill: C.muted });
+  const hist = [['10:42:07', 'WATER'], ['10:41:30', 'YES'], ['10:40:12', 'FOOD']];
+  hist.forEach(([t, k], i) => {
+    const y = 304 + i * 46 + (i === 0 ? 0 : 0) - (1 - e) * 46 * (i === 0 ? 0 : 1);
+    if (i === 0 && e < 0.5) return;
+    g += G(R(14, y, 252, 40, { r: 10, fill: C.surface2 }) + T(26, y + 26, t, { size: 14, w: 600, mono: true, fill: C.muted }) + T(110, y + 26, k, { size: 15, w: 700, mono: true }), { op: i === 0 ? (e - 0.5) * 2 : 1 });
+  });
+  g += R(14, 450, 120, 44, { r: 22, fill: '#D5F28B' }) + T(74, 478, 'Đọc lại', { size: 16, w: 700, anchor: 'middle' }) + R(146, 450, 120, 44, { r: 22, fill: C.surface2 }) + T(206, 478, 'Dừng đọc', { size: 16, w: 700, anchor: 'middle' });
+  return g;
+}
+function words(x, y, s, p, o = {}) { // karaoke-style progress through words (tspans flow naturally)
+  const ws = s.split(' ');
+  const spans = ws.map((w, i) => { const on = p * ws.length > i; return `<tspan fill="${o.cut && !on ? '#c3c8d2' : on ? (o.color || C.primary) : C.muted}">${w}${i < ws.length - 1 ? ' ' : ''}</tspan>`; }).join('');
+  return { svg: `<text x="${x}" y="${y}" font-size="${o.size || 30}" font-weight="700" font-family="'Avenir Next','Helvetica Neue',Arial,sans-serif" xml:space="preserve"${o.strike ? ' text-decoration="line-through"' : ''}>${spans}</text>` };
+}
+
+makeScene({
+  id: 'v-app-tts', title: 'Ứng dụng nhận lệnh và đọc thành tiếng',
+  shots: [
+    { marks: ['receive', 'parse', 'enum', 'invalid'], draw(c) {
+      const rc = c.m('receive'), ps = c.m('parse'), en = c.m('enum'), iv = c.m('invalid'); let g = '';
+      if (!ps.after) {
+        const hex = ['57', '41', '54', '45', '52'];
+        hex.forEach((h, i) => g += appear(box(90 + i * 96, 200, 84, h), seg(rc.lt, 0.2 + i * 0.2, 0.5 + i * 0.2)));
+        g += T(330, 170, 'byte nhận được', { size: 22, w: 700, anchor: 'middle', fill: C.muted });
+        g += appear(arrow(330, 290, 330, 380, { stroke: C.primary, sw: 6 }) + T(350, 345, 'new String(value, US_ASCII).trim()', { size: 19, w: 600, mono: true, fill: C.muted }), seg(rc.lt, 1.6, 2.1));
+        g += appear(box(200, 400, 260, '"WATER"', { size: 36, fill: C.primarySoft, stroke: C.primary }), seg(rc.lt, 2.2, 2.7));
+        g += appear(G(phone(900, 130, 260, 470, T(120, 240, '📶', { size: 60, anchor: 'middle' }) + T(120, 300, 'Nhận lệnh', { size: 22, w: 700, anchor: 'middle', fill: C.muted }))), seg(rc.lt, 0, 0.5));
+        return g;
+      }
+      if (!en.after) {
+        g += codePanel(60, 110, 760, PARSE, { size: 17, lh: 34, title: 'GestureCommand.java', hl: [3] });
+        const steps = [['" water "', 'đầu vào (ví dụ)'], ['"water"', 'trim(): bỏ khoảng trắng'], ['"WATER"', 'toUpperCase(): in hoa'], ['WATER ✓', 'valueOf(): tìm trong 5 lệnh']];
+        steps.forEach(([v, d], i) => {
+          const y = 360 + i * 74, e = seg(ps.lt, 0.6 + i * 1.1, 1.0 + i * 1.1);
+          g += appear(box(120, y, 260, v, { fill: i === 3 ? C.successBg : C.surface, stroke: i === 3 ? C.success : C.border, ink: i === 3 ? C.success : C.text }) + T(410, y + 42, d, { size: 22, w: 600 }), e);
+          if (i) g += G(arrow(250, y - 14, 250, y + 2, { stroke: C.primary, sw: 4 }), { op: e });
+        });
+        g += phone(900, 130, 260, 470, T(120, 240, '⚙️', { size: 60, anchor: 'middle' }) + T(120, 300, 'parse()', { size: 22, w: 700, anchor: 'middle', mono: true, fill: C.muted }));
+        return g;
+      }
+      if (!iv.after) {
+        g += codePanel(60, 130, 1160, ENUM, { size: 19, lh: 46, title: 'GestureCommand.java · enum (danh sách 5 lệnh)', hl: [1] });
+        const labels = [['câu nói', 470], ['nhãn cử chỉ', 760], ['màu thẻ', 1010]];
+        labels.forEach(([s, x], i) => g += appear(pill(x, 470, s, { size: 22, anchor: 'middle' }) + arrow(x, 445, x, 205, { stroke: C.primary, sw: 3, op: 0.5 }), seg(en.lt, 0.6 + i * 0.9, 1.0 + i * 0.9)));
+        g += appear(G(R(380, 540, 520, 90, { r: 18, fill: CMD.WATER.color, stroke: CMD.WATER.ink, sw: 2 }) + T(640, 597, 'Tôi muốn uống nước.', { size: 34, w: 700, anchor: 'middle' })), seg(en.lt, 3.4, 4));
+        return g;
+      }
+      g += box(140, 230, 260, '"HELLO"', { size: 34 });
+      g += appear(arrow(410, 262, 560, 262, { stroke: C.muted, sw: 5 }) + box(570, 230, 200, 'parse()', { size: 26 }), seg(iv.lt, 0.5, 1));
+      g += appear(arrow(780, 262, 900, 262, { stroke: C.muted, sw: 5 }) + box(910, 230, 180, 'null', { size: 30, ink: C.danger, stroke: C.danger, fill: C.dangerBg }), seg(iv.lt, 1.4, 1.9));
+      g += appear(G(cross(560, 450, 1.3) + T(610, 462, 'Bỏ qua: không hiện chữ, không đọc', { size: 32, w: 700, fill: C.danger })), seg(iv.lt, 2.4, 3));
+      return g;
+    } },
+    { marks: ['display', 'speak', 'flush'], draw(c) {
+      const ds = c.m('display'), sp = c.m('speak'), fl = c.m('flush'); let g = '';
+      if (!fl.after) {
+        g += phone(90, 110, 300, 540, phoneApp(seg(ds.lt, 0.4, 1.4)));
+        if (!sp.after) {
+          g += appear(T(470, 220, 'Hiện chữ lớn', { size: 34, w: 700 }) + T(470, 265, 'cho người chăm sóc dễ đọc', { size: 24, w: 500, fill: C.muted }), seg(ds.lt, 0.6, 1.2));
+          g += appear(T(470, 420, '+ Thêm vào lịch sử', { size: 34, w: 700 }) + T(470, 465, 'giữ 5 lệnh gần nhất, kèm giờ', { size: 24, w: 500, fill: C.muted }), seg(ds.lt, 2.4, 3));
+        } else {
+          g += appear(card(470, 160, 420, 200, { r: 22 }) + T(500, 215, 'TextToSpeech', { size: 32, w: 700, mono: true, fill: C.primary }) +
+            T(500, 265, 'ngôn ngữ: vi-VN', { size: 24, w: 600 }) + T(500, 305, 'tốc độ: 0,9 (chậm hơn một chút)', { size: 24, w: 600 }) + T(500, 340, 'QUEUE_FLUSH', { size: 18, w: 600, mono: true, fill: C.muted }), seg(sp.lt, 0.2, 0.7));
+          const p = seg(sp.lt, 1.5, 4.5);
+          g += appear(arrow(680, 370, 680, 430, { stroke: C.primary, sw: 5 }), seg(sp.lt, 1, 1.4));
+          g += speaker(1060, 260, 1.6, p > 0 && p < 1 ? 1 : 0, c.t);
+          g += words(470, 500, 'Tôi muốn uống nước.', p, { size: 40 }).svg;
+        }
+        return g;
+      }
+      // flush timeline
+      const u = fl.lt; const p1 = clamp(seg(u, 0.8, 4.8)), cutAt = 0.5; const cut = p1 >= cutAt;
+      g += T(640, 140, 'QUEUE_FLUSH: câu mới thay câu đang đọc', { size: 34, w: 700, anchor: 'middle' });
+      g += card(110, 200, 1060, 140, { r: 20 }) + chip('WATER', 200, 240, { size: 20 });
+      g += words(150, 310, 'Tôi muốn uống nước.', Math.min(p1, cutAt), { size: 38, cut: cut, strike: cut }).svg;
+      if (cut) g += T(1150, 260, '✂ dừng giữa chừng', { size: 22, w: 700, fill: C.danger, anchor: 'end' });
+      if (cut) {
+        const p2 = seg(u, 0.8 + 4 * cutAt + 0.1, 0.8 + 4 * cutAt + 2.2);
+        g += appear(card(110, 380, 1060, 140, { r: 20, stroke: CMD.FOOD.ink, sw: 3 }) + chip('FOOD', 195, 420, { size: 20 }) + words(150, 490, 'Tôi muốn ăn.', p2, { size: 38, color: CMD.FOOD.ink }).svg, seg(u, 2.8, 3.2));
+        g += speaker(1060, 600, 1, p2 > 0 && p2 < 1 ? 1 : 0, c.t);
+      }
+      g += appear(T(150, 600, 'Không xếp hàng: luôn đọc lệnh mới nhất', { size: 26, w: 700, fill: C.muted }), seg(u, 3.5, 4));
+      return g;
+    } },
+    { marks: ['sum'], draw(c) {
+      let g = codePanel(60, 120, 1160, ENUM, { size: 19, lh: 46, title: 'app/…/GestureCommand.java', hl: [2] });
+      g += appear(G(R(60, 440, 1160, 120, { r: 20, fill: C.successBg }) + T(640, 492, 'Muốn đổi câu nói? Sửa ở app (Java).', { size: 32, w: 700, anchor: 'middle', fill: C.success }) +
+        T(640, 535, 'Không cần nạp lại firmware vòng tay.', { size: 26, w: 600, anchor: 'middle', fill: C.success })), seg(c.lt, 1.2, 1.8));
+      return g;
+    } },
+  ],
+});
+</script></body></html>

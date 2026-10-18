@@ -1,0 +1,133 @@
+WEBVTT
+Kind: subtitles
+Language: vi
+
+1
+00:00:01.000 --> 00:00:03.353
+Máy trạng thái nhận dạng cử chỉ.
+
+2
+00:00:03.553 --> 00:00:06.721
+Đây là mô hình đơn giản hoá với 5 trạng
+thái.
+
+3
+00:00:06.721 --> 00:00:09.551
+Vòng tay luôn ở đúng một trạng thái.
+
+4
+00:00:09.751 --> 00:00:16.407
+Đầu tiên là chờ trung tính: góc nghiêng và
+góc gập dưới 12°, tay gần như không xoay,
+
+5
+00:00:16.407 --> 00:00:18.198
+yên đủ 200 ms.
+
+6
+00:00:18.398 --> 00:00:22.227
+Đủ điều kiện, vòng tay chuyển sang trạng
+thái sẵn sàng.
+
+7
+00:00:22.427 --> 00:00:25.035
+Người dùng nghiêng trái quá 22°.
+
+8
+00:00:25.035 --> 00:00:28.951
+Vòng tay chuyển sang đang giữ và bắt đầu
+bấm giờ.
+
+9
+00:00:29.151 --> 00:00:33.757
+Giữ đủ 250 ms, vòng tay phát lệnh WATER.
+
+10
+00:00:33.957 --> 00:00:38.048
+Sau khi phát, vòng tay nghỉ 650 ms.
+
+11
+00:00:38.248 --> 00:00:41.442
+Tay vẫn giữ nghiêng nhưng lệnh không lặp
+lại.
+
+12
+00:00:41.442 --> 00:00:44.775
+Phải về trung tính thì mới sẵn sàng lần
+nữa.
+
+13
+00:00:44.975 --> 00:00:52.591
+Còn nếu thả tay trước khi đủ 250 ms, đồng
+hồ bị huỷ và không có lệnh nào được gửi.
+
+14
+00:00:52.791 --> 00:00:54.756
+Lắc dùng con quay:
+
+15
+00:00:54.756 --> 00:01:00.625
+tốc độ xoay vượt 100 °/s trong 2 mẫu liên
+tiếp thì tính là một pha.
+
+16
+00:01:00.825 --> 00:01:05.861
+3 pha đổi chiều trong 900 ms thì phát lệnh
+NO.
+
+17
+00:01:06.061 --> 00:01:10.970
+Gõ 2 lần do chính chip IMU phát hiện và
+bật cờ báo.
+
+18
+00:01:11.170 --> 00:01:16.746
+Cờ chỉ được tin khi tay đang yên, 300 ms
+trước tay không cử động.
+
+19
+00:01:16.746 --> 00:01:20.537
+Chờ thêm 150 ms xác nhận, rồi phát YES.
+
+20
+00:01:20.737 --> 00:01:24.485
+Tay vừa xoay nhanh hơn 50 °/s, như khi đặt
+tay xuống bàn?
+
+21
+00:01:24.485 --> 00:01:26.069
+Cờ gõ bị bỏ qua.
+
+22
+00:01:26.269 --> 00:01:33.685
+Hạ cẳng tay quá 25° rồi đưa về dưới 12°
+trong 700 ms: đó là một lần nhấp.
+
+23
+00:01:33.885 --> 00:01:38.047
+Nhấp lần hai cùng chiều trong 2 giây, vòng
+tay phát HELP.
+
+24
+00:01:38.047 --> 00:01:40.616
+Giữ yên một tư thế thì không.
+
+25
+00:01:40.816 --> 00:01:46.560
+Bản cũ dùng gập rồi giữ, nên báo nhầm khi
+đưa tay lên uống nước hay đặt tay lên đùi.
+
+26
+00:01:46.760 --> 00:01:51.332
+Hai lần nhấp nhanh thì sinh hoạt thường
+ngày khó vô tình tạo ra.
+
+27
+00:01:51.532 --> 00:01:55.680
+Ngưỡng, thời gian giữ và thời gian nghỉ
+giúp vòng tay không phát nhầm,
+
+28
+00:01:55.680 --> 00:01:57.103
+không phát lặp.
+

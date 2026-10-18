@@ -1,0 +1,86 @@
+WEBVTT
+Kind: subtitles
+Language: vi
+
+1
+00:00:01.000 --> 00:00:04.027
+Bluetooth Low Energy gửi "WATER".
+
+2
+00:00:04.227 --> 00:00:13.911
+Khi bật nguồn, vòng tay liên tục quảng bá:
+"Tôi là BandW-Sense, có dịch vụ c91b0001."
+
+3
+00:00:14.111 --> 00:00:20.407
+App Android quét trong 8 giây và chỉ giữ
+thiết bị có đúng mã dịch vụ này.
+
+4
+00:00:20.607 --> 00:00:22.726
+App kết nối với vòng tay.
+
+5
+00:00:22.726 --> 00:00:25.045
+BandW không cần ghép đôi.
+
+6
+00:00:25.245 --> 00:00:27.976
+App khám phá dịch vụ:
+
+7
+00:00:27.976 --> 00:00:36.464
+bên trong có characteristic lệnh c91b0002
+và characteristic điều khiển c91b0003.
+
+8
+00:00:36.664 --> 00:00:42.777
+Để nhận lệnh, app ghi 1 vào descriptor
+0x2902, gọi là CCCD:
+
+9
+00:00:42.777 --> 00:00:46.170
+bật công tắc "báo cho tôi".
+
+10
+00:00:46.370 --> 00:00:51.240
+Firmware thấy app đã đăng ký và ghi log
+"APP READY".
+
+11
+00:00:51.440 --> 00:00:54.093
+Khi người dùng nghiêng trái,
+
+12
+00:00:54.093 --> 00:00:59.010
+vòng tay ghi chữ WATER và tự đẩy một thông
+báo (notify).
+
+13
+00:00:59.210 --> 00:01:12.442
+Gói tin chỉ có 5 byte mã ASCII: 57 41 54
+45 52 (hệ 16), tức là W A T E R.
+
+14
+00:01:12.642 --> 00:01:15.557
+Nếu mất kết nối, vòng tay quảng bá lại.
+
+15
+00:01:15.557 --> 00:01:19.415
+Cử chỉ làm lúc mất sóng không được lưu hay
+gửi lại.
+
+16
+00:01:19.615 --> 00:01:27.400
+App tự kết nối lại sau 1, 2, 4, 8, 15, 15
+giây, rồi cứ 30 giây một lần,
+
+17
+00:01:27.400 --> 00:01:31.542
+cho đến khi người dùng bấm ngắt.
+
+18
+00:01:31.742 --> 00:01:39.350
+Ít byte, ít năng lượng, điện thoại nào
+cũng có: đó là lý do BandW chọn BLE.
+

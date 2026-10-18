@@ -1,0 +1,48 @@
+# title: Bluetooth Low Energy gửi "WATER"
+
+@intro
+Bluetooth Low Energy gửi "WATER".
+~ Bluetooth Low Energy gửi chữ WATER.
+
+@advertise | Quảng bá
+Khi bật nguồn, vòng tay liên tục quảng bá: "Tôi là BandW-Sense, có dịch vụ c91b0001."
+~ Khi bật nguồn, vòng tay liên tục phát quảng bá: tôi là Band W Sense, tôi có dịch vụ mã c 9 1 b, 0 0 0 1.
+
+@scan
+App Android quét trong 8 giây và chỉ giữ thiết bị có đúng mã dịch vụ này.
+~ Ứng dụng Android quét trong tám giây, và chỉ giữ lại thiết bị có đúng mã dịch vụ này.
+
+@connect | Kết nối
+App kết nối với vòng tay. BandW không cần ghép đôi.
+~ Ứng dụng kết nối với vòng tay. Band W không cần ghép đôi.
+
+@discover
+App khám phá dịch vụ: bên trong có characteristic lệnh c91b0002 và characteristic điều khiển c91b0003.
+~ Ứng dụng khám phá dịch vụ. Bên trong có characteristic lệnh, mã đuôi 0 0 0 2, và characteristic điều khiển, mã đuôi 0 0 0 3.
+
+@subscribe | Đăng ký
+Để nhận lệnh, app ghi 1 vào descriptor 0x2902, gọi là CCCD: bật công tắc "báo cho tôi".
+~ Để nhận lệnh, ứng dụng ghi số một vào descriptor 2 9 0 2, gọi là C C C D. Giống như bật công tắc: báo cho tôi.
+
+@ready
+Firmware thấy app đã đăng ký và ghi log "APP READY".
+~ Firmware thấy ứng dụng đã đăng ký, và ghi log APP READY.
+
+@notify | Thông báo
+Khi người dùng nghiêng trái, vòng tay ghi chữ WATER và tự đẩy một thông báo (notify).
+~ Khi người dùng nghiêng trái, vòng tay ghi chữ WATER, và tự đẩy một thông báo, gọi là notify.
+
+@bytes
+Gói tin chỉ có 5 byte mã ASCII: 57 41 54 45 52 (hệ 16), tức là W A T E R.
+~ Gói tin chỉ có năm byte mã ASCII: 57, 41, 54, 45, 52, ở hệ mười sáu. Tức là W, A, T, E, R.
+
+@drop
+Nếu mất kết nối, vòng tay quảng bá lại. Cử chỉ làm lúc mất sóng không được lưu hay gửi lại.
+
+@retry
+App tự kết nối lại sau 1, 2, 4, 8, 15, 15 giây, rồi cứ 30 giây một lần, cho đến khi người dùng bấm ngắt.
+~ Ứng dụng tự kết nối lại sau một, hai, bốn, tám, mười lăm, rồi mười lăm giây. Sau đó cứ ba mươi giây thử một lần, cho đến khi người dùng bấm ngắt kết nối.
+
+@sum
+Ít byte, ít năng lượng, điện thoại nào cũng có: đó là lý do BandW chọn BLE.
+~ Ít byte, ít năng lượng, và điện thoại nào cũng có. Đó là lý do Band W chọn Bluetooth năng lượng thấp.

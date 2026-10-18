@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><title>v-ble</title>
+<style>html,body{margin:0;background:#f7f8fa;overflow:hidden;width:1280px;height:720px}svg{display:block}</style></head>
+<body><svg id="stage" xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"></svg>
+<script type="module">
+import { makeScene, C, CMD, T, R, L, Ci, P, G, arrow, card, pill, chip, armFront, bandFace, phone, packet, bleWaves, btGlyph,
+  check, cross, burst, appear, caption, ease, easeOut, clamp, seg, lerp, fmt, rad } from './scene-lib.js';
+
+const BX = 220, BY = 380, PX = 980, PY = 150, PW = 250, PH = 440;
+function band(c, roll = 0, o = {}) {
+  return armFront(BX, BY, roll, { s: 0.85, led: true, ledColor: o.ledOn ? '#4cd964' : '#22304a' }) + T(BX, BY + 120, 'Vòng tay BandW-Sense', { size: 22, w: 700, anchor: 'middle' });
+}
+function phoneUI(title, body) {
+  return phone(PX, PY, PW, PH, T(PW / 2 - 10, 70, title, { size: 20, w: 700, anchor: 'middle', fill: C.muted }) + body);
+}
+function scanList(u, found) {
+  const rows = [['Tai nghe JBL', false], ['BandW-Sense', true], ['Đồng hồ Mi', false]];
+  let g = R(16, 90, PW - 52, 14, { r: 7, fill: '#e6e9ef' }) + R(16, 90, (PW - 52) * clamp(u), 14, { r: 7, fill: C.primary }) + T(16, 130, `quét 8 s · lọc theo UUID dịch vụ`, { size: 13, w: 600, fill: C.muted });
+  rows.forEach(([n, ok], i) => {
+    const y = 160 + i * 70, vis = seg(u, 0.15 + i * 0.15, 0.3 + i * 0.15);
+    if (vis <= 0) return;
+    g += G(R(12, y, PW - 44, 56, { r: 12, fill: ok && found ? C.successBg : C.surface2 }) + T(26, y + 35, n, { size: 18, w: 700, fill: ok ? C.text : '#9aa3b2' }) +
+      (found ? (ok ? check(PW - 60, y + 28, 0.55) : cross(PW - 60, y + 28, 0.55, '#c3c8d2')) : ''), { op: vis });
+  });
+  return g;
+}
+function gattTree(x, y, u, o = {}) {
+  const rows = [
+    [0, 'Thiết bị: BandW-Sense', C.text, ''],
+    [1, 'Dịch vụ c91b0001', C.primary, 'Service'],
+    [2, 'c91b0002 · Lệnh', C.success, 'Read · Notify · ≤ 8 byte'],
+    [3, 'CCCD 0x2902', C.warn, o.cccdOn ? 'BẬT: báo cho tôi' : 'công tắc thông báo'],
+    [2, 'c91b0003 · Điều khiển', '#7048e8', 'Read · Write · Notify'],
+  ];
+  let g = '';
+  rows.forEach(([lvl, a, col, b], i) => {
+    const vis = seg(u, i * 0.15, i * 0.15 + 0.2); if (vis <= 0) return;
+    const yy = y + i * 72, xx = x + lvl * 28;
+    if (lvl) g += G(P(`M${xx - 16} ${yy - 30} V${yy + 20} H${xx}`, { stroke: '#b9bfca', sw: 3 }), { op: vis });
+    const hl = o.hl === i;
+    g += G(R(xx, yy - 6, 400 - lvl * 28, 56, { r: 12, fill: hl ? '#fff3e0' : C.surface, stroke: hl ? C.energy : col, sw: hl ? 4 : 2, shadow: true }) +
+      T(xx + 16, yy + 22, a, { size: 20, w: 700, fill: col, mono: i > 0 }) + T(xx + 16, yy + 42, b, { size: 14, w: 600, fill: C.muted }), { op: vis });
+    if (i === 3) { const on = o.cccdOn; g += G(R(xx + 300, yy + 10, 56, 28, { r: 14, fill: on ? C.successBright : '#c3c8d2' }) + Ci(xx + (on ? 342 : 314), yy + 24, 11, { fill: '#fff' }), { op: vis }); }
+  });
+  return g;
+}
+
+makeScene({
+  id: 'v-ble', title: 'Bluetooth Low Energy gửi "WATER"',
+  shots: [
+    { marks: ['advertise', 'scan'], draw(c) {
+      const sc = c.m('scan'); let g = band(c, 0, { ledOn: Math.floor(c.t / 0.8) % 2 === 0 });
+      g += bleWaves(BX, BY - 70, c.t, { maxR: 230, period: 1.6, n: 3 });
+      // advertising packets flying right every 1.6 s
+      for (let k = 0; k < 2; k++) { const u = ((c.lt / 1.6) + k / 2) % 1; if (c.lt > 0.8) g += packet(lerp(BX + 120, PX - 70, u), 250 + k * 0, 'BandW-Sense · c91b0001', { size: 17, op: Math.sin(u * Math.PI) }); }
+      g += appear(caption('Quảng bá (advertising): "Tôi ở đây!"', { y: 650, size: 26 }), seg(c.m('advertise').lt, 0.5, 1));
+      g += phoneUI(sc.after ? 'Đang quét…' : 'Ứng dụng BandW', sc.after ? scanList(sc.p / 0.8, sc.p > 0.75) : '');
+      return g;
+    } },
+    { marks: ['connect', 'discover'], draw(c) {
+      const cn = c.m('connect'), ds = c.m('discover'); let g = band(c, 0, { ledOn: Math.floor(c.t / 0.8) % 2 === 0 });
+      if (!ds.after) {
+        const a = seg(cn.lt, 0.3, 1.3), b = seg(cn.lt, 1.6, 2.6);
+        g += G(arrow(PX - 30, 300, BX + 160, 300, { stroke: C.primary, sw: 5 }) + T((PX + BX) / 2 + 60, 285, 'Yêu cầu kết nối', { size: 22, w: 700, anchor: 'middle', fill: C.primary }), { op: a });
+        g += G(arrow(BX + 160, 360, PX - 30, 360, { stroke: C.success, sw: 5 }) + T((PX + BX) / 2 + 60, 395, 'Đã kết nối ✓', { size: 22, w: 700, anchor: 'middle', fill: C.success }), { op: b });
+        g += appear(pill((PX + BX) / 2 + 60, 470, 'Không cần ghép đôi (pairing)', { size: 22, anchor: 'middle', fill: C.surface2, ink: C.muted }), seg(cn.lt, 2.8, 3.3));
+        g += phoneUI('Đang kết nối…', '');
+      } else {
+        g += L(BX + 150, BY - 70, 470, BY - 70, { stroke: C.success, sw: 5, dash: '2 10' });
+        g += gattTree(470, 150, ds.p / 0.85);
+        g += phoneUI('Khám phá dịch vụ', T(PW / 2 - 10, 200, '🔍', { size: 60, anchor: 'middle' }));
+      }
+      return g;
+    } },
+    { marks: ['subscribe', 'ready'], draw(c) {
+      const sb = c.m('subscribe'), rd = c.m('ready'); const on = sb.lt > 3.2 || rd.after;
+      let g = band(c, 0, { ledOn: rd.after ? (c.t % 2) < 0.18 : Math.floor(c.t / 0.8) % 2 === 0 });
+      g += L(BX + 150, BY - 70, 470, BY - 70, { stroke: C.success, sw: 5, dash: '2 10' });
+      g += gattTree(470, 150, 1, { cccdOn: on, hl: 3 });
+      const fly = seg(sb.lt, 1.2, 3.2);
+      if (fly > 0 && fly < 1) g += packet(lerp(PX - 20, 870, ease(fly)), lerp(250, 380, ease(fly)), 'ghi 01 00', { size: 18, fill: C.warn });
+      g += phoneUI('Đăng ký nhận lệnh', T(PW / 2 - 10, 200, on ? '🔔' : '🔕', { size: 60, anchor: 'middle' }) + T(PW / 2 - 10, 260, on ? 'Đã đăng ký' : 'subscribe…', { size: 20, w: 700, anchor: 'middle', fill: on ? C.success : C.muted }));
+      if (rd.after) g += appear(G(R(40, 560, 380, 90, { r: 14, fill: C.codeBg }) + T(60, 595, 'Serial log (USB)', { size: 15, w: 600, fill: '#8b93a7' }) + T(60, 630, '> APP READY', { size: 24, w: 700, mono: true, fill: '#7ee787' })), seg(rd.lt, 0.3, 0.8));
+      return g;
+    } },
+    { marks: ['notify', 'bytes'], draw(c) {
+      const nt = c.m('notify'), by = c.m('bytes');
+      const roll = nt.after && !by.after ? -38 * ease(seg(nt.lt, 0.4, 1.4)) : by.after ? -38 : 0;
+      let g = band(c, roll, { ledOn: (c.t % 2) < 0.18 });
+      g += L(BX + 150, BY - 70, PX - 20, BY - 70, { stroke: C.success, sw: 5, dash: '2 10' });
+      const fly = seg(nt.lt, 2.2, 3.6);
+      if (!by.after && fly > 0 && fly < 1) g += packet(lerp(BX + 150, PX + 20, ease(fly)), BY - 70, 'WATER', { size: 24 });
+      const got = fly >= 1 || by.after;
+      g += phoneUI('Thông báo (notify)', got ? R(14, 110, PW - 48, 120, { r: 14, fill: CMD.WATER.color }) + T(PW / 2 - 10, 185, '"WATER"', { size: 32, w: 700, anchor: 'middle', mono: true }) : '');
+      if (!by.after) g += appear(caption('Vòng tay tự đẩy, app không cần hỏi liên tục', { y: 650, size: 24 }), seg(nt.lt, 3.6, 4.1));
+      if (by.after) {
+        const letters = ['W', 'A', 'T', 'E', 'R'], hex = ['57', '41', '54', '45', '52'];
+        g += card(380, 120, 560, 250, { r: 22 }) + T(660, 170, 'Gói tin = 5 byte ASCII', { size: 28, w: 700, anchor: 'middle' });
+        letters.forEach((ch, i) => {
+          const e = easeOut(seg(by.lt, 0.4 + i * 0.5, 0.8 + i * 0.5)), x = 420 + i * 100;
+          g += G(R(x, 200, 84, 140, { r: 14, fill: C.primarySoft, stroke: C.primary, sw: 2 }) + T(x + 42, 262, ch, { size: 48, w: 700, anchor: 'middle', mono: true, fill: C.primary }) +
+            T(x + 42, 318, hex[i], { size: 28, w: 700, anchor: 'middle', mono: true }), { op: e, ty: (1 - e) * 20 });
+        });
+        g += appear(T(660, 410, 'hệ 16 (hex): 57 41 54 45 52', { size: 24, w: 700, anchor: 'middle', mono: true, fill: C.muted }), seg(by.lt, 3, 3.5));
+      }
+      return g;
+    } },
+    { marks: ['drop', 'retry'], draw(c) {
+      const u = c.lt; const broken = u > 0.6;
+      const roll = -38 * ease(seg(u, 3.0, 3.8)) * (1 - ease(seg(u, 5.8, 6.4)));
+      let g = band(c, roll, { ledOn: Math.floor(c.t / 0.8) % 2 === 0 });
+      if (!broken) g += L(BX + 150, BY - 70, PX - 20, BY - 70, { stroke: C.success, sw: 5, dash: '2 10' });
+      else {
+        g += P(`M${BX + 150} ${BY - 70} H560 l20 -24 l20 48 l20 -24 H${PX - 20}`, { stroke: C.danger, sw: 5, dash: '2 10' }) + cross(600, BY - 140, 0.9);
+        g += bleWaves(BX, BY - 70, c.t, { maxR: 200, period: 1.6, n: 3, op: 0.8 });
+        g += T(600, BY - 190, 'Mất kết nối → quảng bá lại', { size: 24, w: 700, anchor: 'middle', fill: C.danger });
+      }
+      if (u > 3.6) {
+        const k = seg(u, 3.6, 5); g += G(packet(BX + 190, BY + 30, 'WATER', { size: 22 }) + L(BX + 130, BY + 30, BX + 250, BY + 30, { stroke: C.danger, sw: 5 }), { op: 1 - k * 0.6 });
+        g += appear(T(BX + 260, BY + 100, 'Không lưu · không gửi lại', { size: 24, w: 700, anchor: 'middle', fill: C.danger }), seg(u, 4, 4.5));
+      }
+      const rt = c.m('retry');
+      if (rt.after) {
+        const steps = ['1 s', '2 s', '4 s', '8 s', '15 s', '15 s', '30 s', '30 s', '…'];
+        g += appear(R(40, 600, 1200, 96, { r: 16, fill: C.surface, stroke: C.border, sw: 1.5, shadow: true }) +
+          T(70, 638, 'App thử nối lại sau:', { size: 22, w: 700, fill: C.muted }), seg(rt.lt, 0, 0.4));
+        steps.forEach((s, i) => { const slow = i >= 6;
+          g += appear(pill(330 + i * 100, 640, s, { size: 22, anchor: 'middle', fill: slow ? C.warnBg : C.primarySoft, ink: slow ? C.warn : C.primary }), seg(rt.lt, 0.4 + i * 0.35, 0.7 + i * 0.35)); });
+        g += appear(T(640, 685, 'Không giới hạn số lần · chỉ dừng khi bấm Ngắt kết nối', { size: 20, w: 700, anchor: 'middle', fill: C.success }), seg(rt.lt, 3.6, 4.1));
+      }
+      g += phoneUI(broken ? 'Mất kết nối' : 'Đã kết nối', broken ? T(PW / 2 - 10, 200, '⏳', { size: 56, anchor: 'middle' }) + T(PW / 2 - 10, 260, 'tự nối lại…', { size: 20, w: 700, anchor: 'middle', fill: C.muted }) : '');
+      return g;
+    } },
+    { marks: ['sum'], draw(c) {
+      const items = [['📦', 'Ít byte', '"WATER" = 5 byte'], ['🔋', 'Ít năng lượng', 'Bluetooth Low Energy'], ['📱', 'Có sẵn', 'không cần Wi-Fi hay router']];
+      let g = '';
+      items.forEach(([ic, a, b], i) => g += appear(card(80 + i * 380, 200, 350, 300, { r: 24 }) + T(255 + i * 380, 300, ic, { size: 70, anchor: 'middle' }) +
+        T(255 + i * 380, 380, a, { size: 32, w: 700, anchor: 'middle' }) + T(255 + i * 380, 425, b, { size: 21, w: 500, anchor: 'middle', fill: C.muted }), seg(c.lt, 0.3 + i * 1.0, 0.8 + i * 1.0)));
+      return g;
+    } },
+  ],
+});
+</script></body></html>

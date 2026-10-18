@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><title>v-main-loop</title>
+<style>html,body{margin:0;background:#f7f8fa;overflow:hidden;width:1280px;height:720px}svg{display:block}</style></head>
+<body><svg id="stage" xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"></svg>
+<script type="module">
+import { makeScene, C, CMD, T, R, L, Ci, P, G, arrow, card, pill, chip, codePanel, varTable, phone, packet, ring, chipIcon, armFront,
+  check, burst, appear, caption, ease, easeOut, clamp, seg, lerp, fmt, rad } from './scene-lib.js';
+
+const SETUP = [
+  'void setup() {',
+  '  imu.begin();                // ±4 g · ±500 °/s',
+  '  BLE.begin(); BLE.advertise();',
+  '  resetCalibration();         // bắt đầu hiệu chuẩn',
+  '  NRF_WDT->TASKS_START = 1;   // bật watchdog 4 s',
+  '}',
+];
+const LOOP = [
+  'void loop() {',
+  '  NRF_WDT->RR[0] = WDT_RR_RR_Reload;   // "tôi vẫn chạy"',
+  '  BLE.poll();',
+  '  // … lệnh CALIBRATE, đèn LED …',
+  '  uint32_t now = millis();',
+  '  if (now - sampleAt < SAMPLE_MS) { delay(1); return; }',
+  '  sampleAt = now;',
+  '  bool valid = readImu(v);             // 6 trục, 1 lần đọc',
+  '  if (!valid) { … return; }            // bỏ mẫu lỗi',
+  '  if (!calibrated) { calibrator.add(…); return; }',
+  '  Gesture event = detector.update(x, y, z, gx, gy, gz, …);',
+  '  if (!subscribed) return;',
+  '  command = event == Gesture::Water ? "WATER" : … ;',
+  '  if (command) gestureCharacteristic.writeValue(command);',
+  '}',
+];
+const HL = { loop: [1, 15], kick: [2], poll: [3, 4], wait: [5, 6], read: [7, 8], check: [9, 10], update: [11], send: [12, 13, 14] };
+
+function vars(c) {
+  const m = (k) => c.m(k);
+  let now = 1003, sampleAt = 1000, x = '–', y = '–', z = '–', gy = '–', event = '–', command = '–', flash = {};
+  if (m('wait').after) { now = 1003 + Math.min(16, Math.floor(m('wait').p * 20)); sampleAt = 1000; }
+  if (m('read').after) { now = 1020; sampleAt = 1020; x = '0,01'; y = '0,02'; z = '0,99'; gy = '1,8'; flash = { sampleAt: 1 - m('read').p * 2, x: 1 - m('read').p * 2 }; }
+  if (m('update').after) { const k = Math.min(3, Math.floor(m('update').p * 4)); now = 1020 + k * 20; sampleAt = now; event = 'None'; flash = { event: 1 - (m('update').p * 4 % 1) * 2 }; }
+  if (m('send').after) { now = 1640; sampleAt = 1640; x = '−0,64'; y = '0,02'; z = '0,77'; gy = '0,5'; event = 'Water'; command = '"WATER"'; flash = { event: 1 - m('send').p * 3, command: 1 - m('send').p * 2 }; }
+  return [['now', now], ['sampleAt', sampleAt], ['x', x], ['y', y], ['z', z], ['gy', gy], ['event', event], ['command', command]].map(([n, v]) => [n, v, flash[n] > 0 ? flash[n] : 0]);
+}
+
+makeScene({
+  id: 'v-main-loop', title: 'Vòng lặp loop() mỗi 20 ms',
+  shots: [
+    { marks: ['setup'], draw(c) {
+      const hl = [2 + Math.min(3, Math.floor(clamp((c.lt - 1) / (c.dur - 2)) * 4))];
+      let g = codePanel(70, 160, 720, SETUP, { size: 21, lh: 40, title: 'BandW_Sense.ino · rút gọn', hl: c.lt > 1 ? hl : [1] });
+      g += appear(pill(980, 230, 'Chạy đúng 1 lần', { size: 30, anchor: 'middle', fill: C.successBg, ink: C.success }), seg(c.lt, 0.3, 0.8));
+      g += T(980, 380, '⏻', { size: 120, anchor: 'middle', fill: C.primary });
+      g += T(980, 470, 'khi bật nguồn', { size: 28, w: 600, anchor: 'middle', fill: C.muted });
+      return g;
+    } },
+    { marks: ['loop', 'kick', 'poll', 'wait', 'read', 'check', 'update', 'send'], draw(c) {
+      const k = c.mark; let hl = HL[k] || [];
+      if (k === 'wait') hl = c.m('wait').p < 0.5 ? [5, 6] : [6, 2, 3];  // fast loops back to top
+      let g = codePanel(40, 90, 720, LOOP, { size: 15.5, lh: 34, title: 'BandW_Sense.ino · loop() rút gọn', hl });
+      // clock
+      const vt = vars(c);
+      const now = vt[0][1];
+      g += card(800, 90, 440, 120, { r: 18 }) + T(825, 135, 'millis()', { size: 22, w: 700, fill: C.muted, mono: true }) +
+        T(1215, 180, `${now} ms`, { size: 44, w: 700, anchor: 'end', mono: true });
+      const since = now - vt[1][1];
+      g += R(825, 160, 160, 16, { r: 8, fill: '#e6e9ef' }) + R(825, 160, 160 * clamp(since / 20), 16, { r: 8, fill: since >= 20 ? C.successBright : C.primary }) + T(825, 198, `${since}/20 ms`, { size: 17, w: 600, mono: true, fill: C.muted });
+      g += varTable(800, 230, vt, { w: 440, rh: 40, size: 20, title: 'Biến (variable)' });
+      // per-cue badges
+      if (k === 'loop') g += appear(pill(1020, 640, '↻ lặp mãi mãi', { size: 28, anchor: 'middle', fill: C.primarySoft }), seg(c.m('loop').lt, 0.3, 0.8));
+      if (k === 'kick') { const p = c.m('kick').lt; const left = 1 - ((p % 1.6) / 1.6) * 0.15; g += card(800, 610, 440, 80, { r: 16 }) + T(825, 660, '🐶 watchdog', { size: 24, w: 700 }) + R(1010, 640, 200, 22, { r: 11, fill: '#e6e9ef' }) + R(1010, 640, 200 * left, 22, { r: 11, fill: C.success }) + T(1210, 685, 'còn ~4 s', { size: 15, w: 600, anchor: 'end', fill: C.muted }); }
+      if (k === 'wait') g += appear(pill(1020, 650, 'chưa đủ 20 ms → delay(1); return', { size: 22, anchor: 'middle', fill: C.warnBg, ink: C.warn, mono: false }), seg(c.m('wait').lt, 0.3, 0.8));
+      if (k === 'read') g += appear(pill(1020, 650, '20 ms × 50 = 1 giây → 50 mẫu/giây', { size: 22, anchor: 'middle', fill: C.successBg, ink: C.success }), seg(c.m('read').lt, 1.5, 2));
+      if (k === 'update') g += appear(pill(1020, 650, 'Hầu hết các vòng: None', { size: 24, anchor: 'middle', fill: C.surface2, ink: C.muted }), seg(c.m('update').lt, 0.5, 1));
+      if (k === 'send') {
+        const u = c.m('send').lt; const fly = seg(u, 1, 2.6);
+        if (fly > 0 && fly < 1) g += packet(lerp(780, 1180, ease(fly)), 655, 'WATER', { size: 20 });
+        if (fly >= 1) g += pill(1020, 655, '📡 notify "WATER" → điện thoại', { size: 22, anchor: 'middle', fill: CMD.WATER.color, ink: C.text });
+      }
+      return g;
+    } },
+    { marks: ['sum'], draw(c) {
+      const steps = [['Đọc', 'readImu()', C.z], ['Kiểm tra', 'detector.update()', C.primary], ['Gửi', 'writeValue()', C.success]];
+      let g = '';
+      const cx = 640, cy = 370, r = 190;
+      const spin = (c.lt * 0.6) % 1;
+      g += Ci(cx, cy, r, { stroke: '#e1e4ea', sw: 16 });
+      g += ring(cx, cy, r, spin, { color: C.primary, sw: 16, track: 'none' });
+      steps.forEach(([a, b, col], i) => {
+        const ang = rad(-90 + i * 120), x = cx + Math.cos(ang) * r, y = cy + Math.sin(ang) * r;
+        g += appear(G(card(x - 120, y - 52, 240, 104, { r: 20, stroke: col, sw: 3 }) + T(x, y - 4, a, { size: 32, w: 700, anchor: 'middle', fill: col }) + T(x, y + 30, b, { size: 17, w: 600, anchor: 'middle', mono: true, fill: C.muted })), seg(c.lt, 0.2 + i * 0.6, 0.7 + i * 0.6));
+      });
+      g += T(cx, cy - 20, '× 50', { size: 64, w: 700, anchor: 'middle' }) + T(cx, cy + 22, 'lần mỗi giây', { size: 24, w: 600, anchor: 'middle', fill: C.muted });
+      return g;
+    } },
+  ],
+});
+</script></body></html>

@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><title>v-calibration</title>
+<style>html,body{margin:0;background:#f7f8fa;overflow:hidden;width:1280px;height:720px}svg{display:block}</style></head>
+<body><svg id="stage" xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"></svg>
+<script type="module">
+import { makeScene, C, CMD, T, R, L, Ci, P, G, arrow, card, pill, chip, para, armFront, phone, gauge, led, check, cross, burst,
+  appear, caption, ease, easeOut, clamp, seg, lerp, fmt, rad } from './scene-lib.js';
+
+const blinkFast = (t) => Math.floor(t / 0.15) % 2 === 0;
+const blinkSlow = (t) => Math.floor(t / 0.8) % 2 === 0;
+const blinkReady = (t) => (t % 2.0) < 0.06 * 3; // 60 ms pulse every 2 s (drawn 3× longer so it is visible at 30 fps)
+
+function dotsRing(cx, cy, r, n, o = {}) {
+  let g = '';
+  for (let i = 0; i < 100; i++) {
+    const a = rad(-90 + i * 3.6), x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+    g += Ci(x, y, 7, { fill: i < n ? (o.color || C.primary) : '#dfe3ea' });
+  }
+  return g;
+}
+// scripted calibration: per cue, how many accepted / rejected samples have arrived by progress u
+function calibState(c) {
+  const s = c.m('samples'), r = c.m('rules'), mn = c.m('mean'), tr = c.m('tremor'), rs = c.m('reset');
+  if (rs.after) {
+    const u = rs.lt; const rej = Math.min(11, 4 + Math.floor(u / 0.3));
+    if (u < 2.8) return { n: 42, rej, phase: 'tremor' };
+    return { n: Math.floor(clamp((u - 3.4) / 2.4) * 12), rej: 0, phase: 'reset', since: u - 2.8 };
+  }
+  if (tr.after) { const u = clamp(tr.lt / (tr.dur - 0.5)); return { n: Math.floor(u * 42), rej: Math.min(4, Math.floor(u * 5)), phase: 'tremor' }; }
+  if (mn.after) return { n: 100, rej: 0, phase: 'done', since: mn.lt };
+  const total = s.dur + r.dur; const u = clamp((c.t - s.start - 1) / (total - 1.4));
+  return { n: Math.floor(u * 100), rej: 0, phase: 'collect' };
+}
+
+makeScene({
+  id: 'v-calibration', title: 'Hiệu chuẩn tư thế trung tính',
+  shots: [
+    { marks: ['why', 'why2'], draw(c) {
+      const w2 = c.m('why2'); const raw = w2.after ? lerp(15, 24, ease(seg(w2.lt, 0.6, 3))) : 15 * ease(seg(c.m('why').lt, 0.6, 2));
+      let g = armFront(330, 420, raw, { s: 1 });
+      g += T(330, 640, `Tư thế nghỉ của người này: ${fmt(Math.min(raw, 15), 0)}°`, { size: 26, w: 700, anchor: 'middle' });
+      g += T(900, 150, 'Không hiệu chuẩn: so với 0°', { size: 30, w: 700, anchor: 'middle' });
+      g += gauge(900, 430, 220, -60, 60, raw, { zones: [{ from: -60, to: -22, fill: CMD.WATER.color }, { from: 22, to: 60, fill: CMD.FOOD.color }, { from: -12, to: 12, fill: '#cfeedd' }],
+        ticks: [{ v: -22, color: C.enter, label: '−22°' }, { v: 22, color: C.enter, label: '22°' }, { v: 0, label: '0°' }] });
+      g += T(900, 510, `${fmt(raw, 0)}°`, { size: 46, w: 700, anchor: 'middle', mono: true });
+      if (w2.after) g += appear(pill(900, 590, `chỉ cần thêm ${fmt(Math.max(0, 22 - 15), 0)}°!`, { size: 26, anchor: 'middle', fill: C.warnBg, ink: C.warn }), seg(w2.lt, 0.2, 0.7));
+      if (raw > 22) g += appear(G(cross(760, 640, 1) + T(800, 650, 'Phát nhầm FOOD', { size: 30, w: 700, fill: C.danger })), seg(w2.lt, 2.6, 3.0));
+      return g;
+    } },
+    { marks: ['samples', 'rules', 'mean', 'tremor', 'reset'], draw(c) {
+      const st = calibState(c); const tr = c.m('tremor');
+      const jitter = st.phase === 'tremor' ? 3 * Math.sin(c.t * 37) + 2 * Math.sin(c.t * 23) : 0;
+      let g = armFront(250, 470, 15 + jitter, { s: 0.75, led: true, ledColor: st.phase === 'done' ? (blinkReady(c.t) ? '#4cd964' : '#22304a') : (blinkFast(c.t) ? '#4cd964' : '#22304a') });
+      g += T(250, 640, st.phase === 'done' ? 'LED: chớp ngắn (sẵn sàng)' : 'LED: nháy nhanh (đang hiệu chuẩn)', { size: 21, w: 600, fill: C.muted, anchor: 'middle' });
+      // ring
+      const cx = 640, cy = 360, r = 150;
+      const flash = st.phase === 'reset' ? Math.max(0.15, 1 - st.since / 1.2) : 0;
+      if (flash > 0) g += Ci(cx, cy, r + 30, { fill: C.dangerBg, op: flash });
+      if (st.rej > 10) g += Ci(cx, cy, r + 30, { fill: C.dangerBg, op: 0.8 });
+      g += dotsRing(cx, cy, r, st.n, { color: st.phase === 'done' ? C.successBright : C.primary });
+      g += T(cx, cy + 6, `${st.n}`, { size: 64, w: 700, anchor: 'middle', mono: true }) + T(cx, cy + 46, '/ 100 mẫu', { size: 22, w: 600, anchor: 'middle', fill: C.muted });
+      g += T(cx, cy - 190, '100 mẫu × 20 ms = 2 giây', { size: 26, w: 700, anchor: 'middle' });
+      if (flash > 0) g += T(cx, cy + 230, '↺ Quá 10 mẫu rung → bắt đầu lại', { size: 28, w: 700, fill: C.danger, anchor: 'middle' });
+      // reject counter
+      if (tr.after) {
+        g += card(870, 520, 330, 120, { r: 18, stroke: st.rej > 10 ? C.danger : C.border, sw: 2 });
+        g += T(895, 565, 'Mẫu rung bị loại', { size: 22, w: 600, fill: C.muted });
+        for (let i = 0; i < 10; i++) g += R(895 + i * 29, 585, 22, 34, { r: 5, fill: i < st.rej ? C.danger : '#e6e9ef' });
+        g += T(1185, 565, `${Math.min(st.rej, 11)}/10`, { size: 24, w: 700, anchor: 'end', mono: true, fill: st.rej > 10 ? C.danger : C.text });
+        if (st.phase === 'tremor' && st.rej > 0 && (c.t * 3) % 1 < 0.3) g += Ci(cx + Math.cos(c.t * 5) * (r + 40), cy + Math.sin(c.t * 5) * (r + 40), 9, { fill: C.danger });
+      }
+      // rules
+      const ru = c.m('rules');
+      if (ru.after && !c.m('mean').after) {
+        const rules = ['|a| trong 0,85–1,15 g (gần 1 g)', '√(x² + z²) > 0,6 g', 'mỗi trục con quay < 20 °/s', 'lệch trung bình ≤ 0,08 g'];
+        g += card(860, 130, 360, 330, { r: 20 }) + T(885, 175, 'Mẫu tốt khi:', { size: 26, w: 700, fill: C.primary });
+        rules.forEach((s, i) => g += appear(G(check(900, 225 + i * 62, 0.6) + T(925, 233 + i * 62, s, { size: 19, w: 600 })), seg(ru.lt, 0.4 + i * 1.1, 0.9 + i * 1.1)));
+      }
+      const mn = c.m('mean');
+      if (mn.after && !tr.after) {
+        const mx = Math.sin(rad(15)), mz = Math.cos(rad(15));
+        g += appear(card(850, 160, 380, 300, { r: 20 }) + T(875, 205, 'Trung bình 100 mẫu', { size: 24, w: 700, fill: C.muted }) +
+          T(875, 255, `meanX = ${fmt(mx)}`, { size: 26, w: 700, mono: true, fill: C.x }) + T(875, 295, `meanZ = ${fmt(mz)}`, { size: 26, w: 700, mono: true, fill: C.z }) +
+          T(875, 360, 'baseline = atan2(meanX, meanZ)', { size: 17, w: 700, mono: true }) + T(875, 420, '= 15°  (mốc trung tính)', { size: 28, w: 700, fill: C.success }), seg(mn.lt, 0.3, 0.9));
+      }
+      return g;
+    } },
+    { marks: ['trigger'], draw(c) {
+      const items = [['⏻', 'Bật nguồn', 'setup() gọi resetCalibration()'], ['📱', 'App gửi "CALIBRATE"', 'ghi vào characteristic điều khiển'], ['⚠️', '1 giây dữ liệu lỗi', '50 mẫu lỗi liên tiếp']];
+      let g = T(640, 150, 'Khi nào hiệu chuẩn chạy?', { size: 38, w: 700, anchor: 'middle' });
+      items.forEach(([ic, a, b], i) => g += appear(card(80 + i * 380, 230, 350, 300, { r: 24 }) + T(255 + i * 380, 330, ic, { size: 70, anchor: 'middle' }) +
+        T(255 + i * 380, 410, a, { size: 28, w: 700, anchor: 'middle' }) + T(255 + i * 380, 455, b, { size: 19, w: 500, anchor: 'middle', fill: C.muted, mono: i < 2 && false }), seg(c.lt, 0.4 + i * 1.6, 0.9 + i * 1.6)));
+      g += appear(T(640, 600, 'Board trả lời app: "CALIBRATING" … rồi "READY"', { size: 26, w: 700, anchor: 'middle', fill: C.primary }), seg(c.lt, 5.2, 5.8));
+      return g;
+    } },
+    { marks: ['led'], draw(c) {
+      const rows = [['Nháy nhanh · 150 ms', 'Đang hiệu chuẩn', blinkFast], ['Nháy chậm · 800 ms', 'Chờ app kết nối', blinkSlow], ['Chớp ngắn mỗi 2 giây', 'Sẵn sàng', blinkReady]];
+      let g = T(640, 140, 'Đèn LED trên bo mạch', { size: 38, w: 700, anchor: 'middle' });
+      rows.forEach(([a, b, f], i) => {
+        const y = 250 + i * 140; const hl = seg(c.lt, 0.5 + i * 2.2, 0.9 + i * 2.2);
+        g += appear(card(180, y - 55, 920, 110, { r: 22, stroke: hl > 0 && c.lt < 2.7 + i * 2.2 ? C.primary : C.border, sw: 2.5 }) + led(270, y, f(c.t), { r: 22 }) +
+          T(340, y - 6, a, { size: 30, w: 700 }) + T(340, y + 32, b, { size: 24, w: 500, fill: C.muted }), hl);
+      });
+      return g;
+    } },
+    { marks: ['done'], draw(c) {
+      const u = c.lt; const rel = 30 * ease(seg(u, 2.5, 4)); const raw = 15 + rel;
+      let g = armFront(330, 430, raw, { s: 0.95, led: true, ledColor: blinkReady(c.t) ? '#4cd964' : '#22304a' });
+      g += P(`M330 430 L${330 + Math.sin(rad(15)) * 220} ${430 - Math.cos(rad(15)) * 220}`, { stroke: C.success, sw: 4, dash: '8 8' });
+      g += T(330 + Math.sin(rad(15)) * 235, 430 - Math.cos(rad(15)) * 235, 'mốc 15°', { size: 22, w: 700, fill: C.success, anchor: 'middle' });
+      g += G(phone(940, 110, 240, 420, R(14, 80, 192, 70, { r: 14, fill: C.successBg }) + T(110, 125, 'READY', { size: 30, w: 700, anchor: 'middle', fill: C.success, mono: true })), { op: easeOut(seg(u, 0, 0.6)) });
+      if (u < 2.2) g += appear(arrow(500, 300, 920, 260, { stroke: C.primary, sw: 5 }), seg(u, 0.2, 0.8));
+      g += appear(card(520, 470, 400, 130, { r: 20 }) + T(545, 520, `góc = ${fmt(raw, 0)}° − 15°`, { size: 30, w: 700, mono: true }) + T(545, 570, `= ${fmt(rel, 0)}° so với mốc`, { size: 30, w: 700, fill: C.primary }), seg(u, 2.2, 2.7));
+      return g;
+    } },
+  ],
+});
+</script></body></html>

@@ -1,0 +1,82 @@
+WEBVTT
+Kind: subtitles
+Language: vi
+
+1
+00:00:01.000 --> 00:00:03.192
+Thí nghiệm và ma trận nhầm lẫn.
+
+2
+00:00:03.392 --> 00:00:06.848
+Kiểm thử trên máy tính cho thấy thuật toán
+chạy đúng luật,
+
+3
+00:00:06.848 --> 00:00:10.242
+nhưng chưa nói được độ chính xác trên tay
+người thật.
+
+4
+00:00:10.442 --> 00:00:16.325
+Hiệu chuẩn xong, mỗi người làm mỗi cử chỉ
+20 lần, theo thứ tự được xáo trộn.
+
+5
+00:00:16.525 --> 00:00:23.569
+Mỗi lần thử ghi lại: cử chỉ định làm, lệnh
+app nhận được, thời điểm và ghi chú.
+
+6
+00:00:23.769 --> 00:00:29.230
+Thêm một phiên sinh hoạt bình thường,
+không làm cử chỉ, để đếm lệnh phát nhầm.
+
+7
+00:00:29.430 --> 00:00:35.816
+Kết quả xếp vào ma trận nhầm lẫn: hàng là
+cử chỉ đã làm, cột là lệnh nhận được.
+
+8
+00:00:36.016 --> 00:00:38.397
+Mỗi lần thử rơi vào một ô.
+
+9
+00:00:38.397 --> 00:00:43.641
+Số trong video chỉ là số liệu minh hoạ,
+không phải kết quả thật.
+
+10
+00:00:43.841 --> 00:00:46.071
+Đường chéo là những lần nhận đúng.
+
+11
+00:00:46.071 --> 00:00:48.341
+Ô ngoài đường chéo là nhầm lẫn.
+
+12
+00:00:48.541 --> 00:00:52.829
+Độ chính xác = số lần đúng ÷ số lần thử.
+
+13
+00:00:52.829 --> 00:00:55.888
+Ví dụ 18 trên 20 là 90%.
+
+14
+00:00:56.088 --> 00:01:01.624
+Ở đây HELP hay không được nhận: có thể
+người thử nhấp chậm quá 700 ms,
+
+15
+00:01:01.624 --> 00:01:04.947
+cần hướng dẫn lại hoặc chỉnh ngưỡng.
+
+16
+00:01:05.147 --> 00:01:10.775
+Hãy ghi rõ điều kiện đo, số người thử, và
+báo cáo cả những lần thất bại.
+
+17
+00:01:10.975 --> 00:01:17.117
+Khi giám khảo hỏi độ chính xác, em chỉ đưa
+ra số đo thật của nhóm, kèm cách đo.
+

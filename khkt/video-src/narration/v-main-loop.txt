@@ -1,0 +1,44 @@
+# title: Vòng lặp loop() mỗi 20 ms
+
+@intro
+Vòng lặp loop() mỗi 20 ms.
+~ Vòng lặp loop, mỗi hai mươi mili giây.
+
+@setup | setup()
+Khi bật nguồn, hàm setup() chạy đúng 1 lần: cài cảm biến, bật Bluetooth, bắt đầu hiệu chuẩn, bật watchdog.
+~ Khi bật nguồn, hàm setup chạy đúng một lần: cài đặt cảm biến, bật Bluetooth, bắt đầu hiệu chuẩn, và bật watchdog.
+
+@loop | Mỗi vòng
+Sau đó hàm loop() chạy lặp đi lặp lại, mãi mãi.
+~ Sau đó, hàm loop chạy lặp đi lặp lại, mãi mãi.
+
+@kick
+Đầu mỗi vòng, chip báo cho watchdog: "tôi vẫn chạy". Nếu treo quá 4 giây, board tự khởi động lại.
+~ Đầu mỗi vòng, chip báo cho watchdog rằng tôi vẫn đang chạy. Nếu bị treo quá bốn giây, board tự khởi động lại.
+
+@poll
+Tiếp theo BLE.poll() xử lý Bluetooth, rồi kiểm tra lệnh hiệu chuẩn và cập nhật đèn LED.
+~ Tiếp theo, B L E chấm poll xử lý Bluetooth, rồi kiểm tra lệnh hiệu chuẩn, và cập nhật đèn LED.
+
+@wait
+Chưa đủ 20 ms kể từ lần đọc trước? Chương trình nghỉ 1 ms rồi quay lại từ đầu.
+~ Nếu chưa đủ hai mươi mili giây kể từ lần đọc trước, chương trình nghỉ một mili giây, rồi quay lại từ đầu.
+
+@read | Đọc – kiểm tra – gửi
+Đủ 20 ms thì đọc cảm biến: 6 trục trong một lần đọc. Vậy là 50 mẫu mỗi giây.
+~ Đủ hai mươi mili giây thì đọc cảm biến: sáu trục trong một lần đọc. Vậy là năm mươi mẫu mỗi giây.
+
+@check
+Mẫu lỗi bị bỏ qua. Nếu chưa hiệu chuẩn, mẫu được đưa vào bộ hiệu chuẩn.
+
+@update
+Còn không, detector.update() so mẫu với các ngưỡng. Hầu hết các vòng, kết quả là "không có gì".
+~ Còn không, detector chấm update so sánh mẫu với các ngưỡng. Hầu hết các vòng, kết quả là không có gì.
+
+@send
+Khi có cử chỉ và app đã đăng ký, vòng tay ghi chữ "WATER" vào characteristic để gửi đi.
+~ Khi có cử chỉ, và ứng dụng đã đăng ký, vòng tay ghi chữ WATER vào characteristic để gửi đi.
+
+@sum
+Đọc, kiểm tra, gửi: 50 lần mỗi giây. Đó là nhịp tim của firmware.
+~ Đọc, kiểm tra, gửi: năm mươi lần mỗi giây. Đó là nhịp tim của firmware.

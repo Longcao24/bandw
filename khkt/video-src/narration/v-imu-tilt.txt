@@ -1,0 +1,62 @@
+# title: Cảm biến IMU và góc nghiêng
+
+@intro
+Cảm biến IMU và góc nghiêng.
+~ Cảm biến I M U và góc nghiêng.
+
+@imu | Gia tốc kế
+Trên bo mạch XIAO có một chip nhỏ tên là IMU, gồm gia tốc kế và con quay hồi chuyển.
+~ Trên bo mạch XIAO có một chip nhỏ tên là I M U, gồm gia tốc kế và con quay hồi chuyển.
+
+@axes
+Gia tốc kế đo theo ba trục: X sang ngang, Y dọc theo cẳng tay, Z hướng lên trên.
+~ Gia tốc kế đo theo ba trục: trục X sang ngang, trục Y dọc theo cẳng tay, trục Z hướng lên trên.
+
+@gravity | Trọng lực
+Khi tay đứng yên, gia tốc kế vẫn cảm nhận trọng lực, khoảng 1 g, hướng xuống đất.
+~ Khi tay đứng yên, gia tốc kế vẫn cảm nhận được trọng lực, khoảng một g, hướng xuống đất.
+
+@flat
+Đặt tay phẳng, gần như toàn bộ 1 g nằm trên trục Z.
+~ Đặt tay phẳng, gần như toàn bộ một g nằm trên trục Z.
+
+@tilt
+Nghiêng tay sang trái, trọng lực chia sang hai trục: phần x lớn dần, phần z nhỏ dần.
+~ Nghiêng tay sang trái, trọng lực chia sang hai trục: phần x lớn dần, còn phần z nhỏ dần.
+
+@atan | atan2
+Từ hai thành phần x và z, hàm atan2 tính ra góc nghiêng, rồi nhân 57,3 để đổi sang độ.
+~ Từ hai thành phần x và z, hàm a tan hai tính ra góc nghiêng, rồi nhân với năm mươi bảy phẩy ba để đổi sang độ.
+
+@example
+Ví dụ x = −0,5 và z = 0,87 thì góc khoảng −30°, tức là nghiêng trái 30°.
+~ Ví dụ, x bằng âm không phẩy năm, z bằng không phẩy tám bảy, thì góc khoảng âm ba mươi độ, tức là nghiêng trái ba mươi độ.
+
+@baseline
+BandW lấy góc này trừ đi góc của tư thế trung tính, rồi làm mượt bằng bộ lọc.
+~ Band W lấy góc này trừ đi góc của tư thế trung tính, rồi làm mượt bằng một bộ lọc.
+
+@thresh
+Vượt quá 22° là bắt đầu tính nghiêng. Phải về dưới 12° mới coi là trung tính trở lại.
+~ Vượt quá hai mươi hai độ là bắt đầu tính nghiêng. Phải về dưới mười hai độ mới coi là trung tính trở lại.
+
+@dir
+Góc âm là nghiêng trái, lệnh WATER. Góc dương là nghiêng phải, lệnh FOOD.
+
+@vertical
+Nếu cẳng tay dựng đứng, x và z đều quá nhỏ, nên vòng tay khoá góc nghiêng lại.
+
+@gyro | Con quay
+Con quay hồi chuyển thì khác: nó đo tốc độ xoay, đơn vị độ trên giây.
+
+@gyro-still
+Giữ tay nghiêng yên, con quay vẫn chỉ gần 0.
+~ Giữ tay nghiêng yên một chỗ, con quay vẫn chỉ gần bằng không.
+
+@gyro-shake
+Lắc cổ tay, kim vọt quá 100 °/s rồi đổi chiều liên tục. Đó là dấu hiệu của cử chỉ "Không".
+~ Lắc cổ tay, kim vọt lên quá một trăm độ trên giây, rồi đổi chiều liên tục. Đó là dấu hiệu của cử chỉ Không.
+
+@sum
+Gia tốc kế cho biết tay nghiêng bao nhiêu, con quay cho biết tay xoay nhanh cỡ nào.
+~ Tóm lại, gia tốc kế cho biết tay đang nghiêng bao nhiêu, còn con quay cho biết tay đang xoay nhanh cỡ nào.

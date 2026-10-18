@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><title>v-gesture-state-machine</title>
+<style>html,body{margin:0;background:#f7f8fa;overflow:hidden;width:1280px;height:720px}svg{display:block}</style></head>
+<body><svg id="stage" xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"></svg>
+<script type="module">
+import { makeScene, C, CMD, T, R, L, Ci, P, G, arrow, card, pill, chip, para, armFront, armSide, chipIcon, chart, codePanel, stateMachine, ring,
+  check, cross, burst, finger, gestureFigure, appear, caption, ease, easeOut, clamp, seg, lerp, fmt, rad, simulate, sampleAt } from './scene-lib.js';
+
+// ---- scenarios run through the JS port of GestureDetector (same constants as firmware) ----
+const SC = {
+  water: simulate((ms) => ({ roll: ms < 700 ? 0 : ms < 1200 ? lerp(0, -40, (ms - 700) / 500) : ms < 2600 ? -40 : ms < 2800 ? lerp(-40, 0, (ms - 2600) / 200) : 0 }), 3800),
+  flick: simulate((ms) => ({ roll: ms < 700 ? 0 : ms < 950 ? lerp(0, -40, (ms - 700) / 250) : ms < 1250 ? -40 : ms < 1500 ? lerp(-40, 0, (ms - 1250) / 250) : 0 }), 2200),
+  shake: simulate((ms) => ({ roll: ms < 600 || ms > 1500 ? 0 : 12 * Math.sin((ms - 600) / 1000 * Math.PI * 2 * 3) }), 1800),
+  tap: simulate((ms) => ({ roll: 0, tap: ms === 1000 }), 1600),
+  // HELP: two quick forearm dips (out to 40° and back, ≈ 0.5 s each), like gesture_test.cpp's helpDips()
+  help: simulate((ms) => {
+    const dip = (t0) => { const v = ms - t0; return v < 0 || v > 480 ? 0 : v < 160 ? 40 * v / 160 : v < 320 ? 40 : 40 * (480 - v) / 160; };
+    return { roll: 0, pitch: dip(600) + dip(1320) };
+  }, 2600),
+};
+const evAt = (rec, name) => rec.find((r) => r.event === name)?.ms;
+const W_EMIT = evAt(SC.water, 'WATER');                                       // 1620
+const W_CAND = SC.water.find((r) => r.candidate)?.ms;                         // 1360
+const W_REARM = SC.water.find((r, i) => i > 10 && r.armed && !SC.water[i - 1].armed && r.ms > W_EMIT)?.ms; // ~3020
+const W_ARM = SC.water.find((r) => r.armed).ms;                               // 200
+const pulseTimes = (rec) => { const out = []; rec.forEach((r, i) => { if (i && (r.shakePulses > rec[i - 1].shakePulses || (r.event === 'NO'))) out.push(r.ms); }); return out; };
+const SH_PULSES = pulseTimes(SC.shake), SH_EMIT = evAt(SC.shake, 'NO');
+const TAP_EMIT = evAt(SC.tap, 'YES'), HELP_EMIT = evAt(SC.help, 'HELP'), HELP_D1 = SC.help.find((r) => r.dips === 1)?.ms;
+
+// map current cue progress → scenario milliseconds
+const span = (c, mark, a, b, hold = 0.88) => lerp(a, b, clamp(c.m(mark).p / hold));
+function waterMs(c) {
+  if (c.m('norepeat').after) return span(c, 'norepeat', W_EMIT + 660, W_REARM + 120);
+  if (c.m('cooldown').after) return span(c, 'cooldown', W_EMIT + 60, W_EMIT + 660);
+  if (c.m('emit').after) return span(c, 'emit', W_CAND + 140, W_EMIT + 60);
+  if (c.m('candidate').after) return span(c, 'candidate', 700, W_CAND + 140);
+  if (c.m('armed').after) return span(c, 'armed', W_ARM, 700);
+  if (c.m('neutral').after) return span(c, 'neutral', 0, W_ARM, 0.75);
+  return 0;
+}
+function stateOf(r, emittedAt) {
+  if (r.cooling) return r.ms - r.lastEmission < 160 ? 'emit' : 'cooldown';
+  if (!r.armed) return 'neutral';
+  return r.candidate ? 'candidate' : 'armed';
+}
+const CODE = [
+  'if (!armed) {',
+  '  if (neutral && now - neutralAt >= 200) armed = true;',
+  '  return None;',
+  '}',
+  'direction = |roll| > 22 ? (roll < 0 ? -1 : 1) : 0;',
+  'if (candidate != direction) candidateAt = now;',
+  'if (now - candidateAt >= 250) return emit(Water);',
+  '// emit(): armed = false; cooling = true; (650 ms)',
+];
+const CODE_HL = { neutral: [1, 2, 3], armed: [5], candidate: [5, 6], emit: [7, 8], cooldown: [8] };
+
+function timerBar(x, y, label, p, col, o = {}) {
+  return T(x, y, label, { size: 19, w: 700, fill: o.dim ? '#9aa3b2' : C.text }) + R(x, y + 10, 240, 18, { r: 9, fill: '#e6e9ef' }) + R(x, y + 10, 240 * clamp(p), 18, { r: 9, fill: col }) +
+    (o.ok ? check(x + 262, y + 19, 0.5) : '') + (o.fail ? cross(x + 262, y + 19, 0.5) : '');
+}
+
+function machineShot(c, rec, ms, o = {}) {
+  const r = sampleAt(rec, ms); const st = stateOf(r); let g = '';
+  g += armFront(200, 260, r.roll, { s: 0.6 });
+  g += T(200, 120, o.badge || 'Kịch bản: nghiêng trái, giữ', { size: 20, w: 700, fill: C.muted, anchor: 'middle' });
+  // timers
+  const nP = !r.armed && r.neutralTiming && !r.cooling ? (r.ms - r.neutralAt) / 200 : r.armed ? 1 : 0;
+  const hP = r.candidate ? (r.ms - r.candidateAt) / 250 : st === 'emit' || st === 'cooldown' ? (o.flick ? 0 : 1) : 0;
+  const cP = r.cooling ? (r.ms - r.lastEmission) / 650 : 0;
+  g += timerBar(370, 170, 'Trung tính 200 ms', nP, C.success, { ok: r.armed });
+  const flickFail = o.flick && !r.candidate && ms > 1240;
+  g += timerBar(370, 240, 'Giữ 250 ms', o.flick && flickFail ? 120 / 250 : hP, C.primary, { ok: !o.flick && (st === 'emit' || st === 'cooldown'), fail: flickFail });
+  g += timerBar(370, 310, 'Nghỉ 650 ms', cP, '#7a8599');
+  // chart
+  const ch = chart({ x: 50, y: 400, w: 560, h: 230, t0: 0, t1: rec[rec.length - 1].ms, v0: -50, v1: 20, until: ms,
+    bands: [{ v0: -12, v1: 12, fill: C.neutral }],
+    lines: [{ v: -22, color: C.enter, label: 'vào −22°' }, { v: -12, color: C.exit, label: 'ra −12°', below: true, dash: '3 7' }],
+    series: [{ data: rec.map((x) => [x.ms, x.roll]), color: '#c3c8d2', sw: 3 }, { data: rec.map((x) => [x.ms, x.filtered]), color: C.primary, sw: 5 }], cursor: ms, ylabel: 'Góc nghiêng (đã lọc)' });
+  g += ch.svg + T(610, 660, `t = ${fmt(ms, 0)} ms`, { size: 18, w: 600, fill: C.muted, anchor: 'end', mono: true });
+  // state machine + code
+  const sm = stateMachine(930, 300, st, { r: 135, nw: 172, nh: 56 });
+  g += sm.svg;
+  if (st === 'emit') { const k = clamp((r.ms - r.lastEmission) / 160); g += burst(sm.pos[3][0], sm.pos[3][1], k, C.energy, 120); }
+  if (r.cooling || st === 'emit') g += chip('WATER', 930, 300, { size: 26 });
+  g += codePanel(640, 448, 600, CODE, { size: 15, lh: 21, title: 'Mã rút gọn từ GestureDetector.h', hl: CODE_HL[st] });
+  return g;
+}
+
+makeScene({
+  id: 'v-gesture-state-machine', title: 'Máy trạng thái nhận dạng cử chỉ',
+  shots: [
+    { marks: ['model', 'neutral', 'armed', 'candidate', 'emit', 'cooldown', 'norepeat', 'flick'], draw(c) {
+      if (c.m('flick').after) {
+        const ms = span(c, 'flick', 500, 1800);
+        return machineShot(c, SC.flick, ms, { badge: 'Kịch bản: thả tay sớm', flick: true });
+      }
+      const ms = waterMs(c);
+      let g = machineShot(c, SC.water, ms);
+      if (!c.m('neutral').after) g += appear(caption('Mô hình đơn giản hoá: 5 trạng thái', { y: 90, size: 26 }), seg(c.m('model').lt, 0.5, 1));
+      if (c.m('norepeat').on && ms < 2600) g += pill(200, 360, 'Vẫn giữ nghiêng → không lặp', { size: 20, anchor: 'middle', fill: C.warnBg, ink: C.warn });
+      return g;
+    } },
+    { marks: ['shake', 'shake2'], draw(c) {
+      const ms = c.m('shake2').after ? span(c, 'shake2', SH_PULSES[1] + 20, SH_EMIT + 300) : span(c, 'shake', 300, SH_PULSES[1] + 20);
+      const rec = SC.shake, r = sampleAt(rec, ms);
+      let g = armFront(230, 250, r.roll, { s: 0.6 });
+      if (Math.abs(r.gy) > 100) g += [-1, 1].map((d) => P(`M${230 + d * 140} 200 q${d * 16} 40 0 80`, { stroke: C.primary, sw: 5, op: 0.7 })).join('');
+      const ch = chart({ x: 480, y: 110, w: 740, h: 300, t0: 400, t1: 1500, v0: -300, v1: 300, until: ms,
+        lines: [{ v: 100, color: C.enter, label: '+100 °/s' }, { v: -100, color: C.enter, label: '−100 °/s', below: true }],
+        series: [{ data: rec.map((x) => [x.ms, x.gy]), color: C.g, sw: 4 }], cursor: ms, ylabel: 'gy (°/s): tốc độ xoay quanh cẳng tay' });
+      g += ch.svg;
+      for (const x of rec) if (x.ms <= ms && x.ms >= 400 && Math.abs(x.gy) > 100) g += Ci(ch.X(x.ms), ch.Y(x.gy), 5, { fill: C.g, stroke: '#fff', sw: 1.5 });
+      SH_PULSES.forEach((pt, i) => { if (pt <= ms) { const v = sampleAt(rec, pt).gy; g += Ci(ch.X(pt), ch.Y(v), 20, { fill: C.energy, stroke: '#fff', sw: 3 }) + T(ch.X(pt), ch.Y(v) + 8, String(i + 1), { size: 22, w: 700, anchor: 'middle', fill: '#fff' }); } });
+      // counter + window
+      const n = SH_PULSES.filter((p) => p <= ms).length;
+      g += card(480, 450, 360, 170, { r: 18 }) + T(505, 495, 'Đếm pha', { size: 24, w: 700, fill: C.muted });
+      for (let i = 0; i < 3; i++) g += Ci(540 + i * 70, 555, 26, { fill: i < n ? C.energy : '#e6e9ef' }) + T(540 + i * 70, 564, String(i + 1), { size: 24, w: 700, anchor: 'middle', fill: i < n ? '#fff' : '#9aa3b2' });
+      g += T(760, 564, `${n}/3`, { size: 32, w: 700, mono: true, anchor: 'middle' });
+      if (n > 0) {
+        const left = clamp(1 - (ms - SH_PULSES[0]) / 900);
+        g += card(870, 450, 350, 170, { r: 18 }) + T(895, 495, 'Cửa sổ 900 ms', { size: 24, w: 700, fill: C.muted }) +
+          R(895, 525, 300, 26, { r: 13, fill: '#e6e9ef' }) + R(895, 525, 300 * left, 26, { r: 13, fill: C.primary }) + T(895, 590, `còn ${fmt(left * 900, 0)} ms`, { size: 22, w: 600, mono: true });
+      }
+      if (ms >= SH_EMIT) { const k = clamp((ms - SH_EMIT) / 200); g += burst(1050, 300, k, C.energy, 120) + appear(chip('NO', 1050, 300, { size: 34 }) + T(1050, 370, '"Không."', { size: 30, w: 700, anchor: 'middle' }), k * 2); }
+      g += codePanel(40, 450, 410, ['sign = gy > 100 ? 1 : gy < -100 ? -1 : 0;', 'sustained = sign && sign == lastSign;', '// đổi dấu, cách ≥ 80 ms', 'if (++shakePulses >= 3) return emit(No);'], { size: 14, lh: 26, title: 'Mã rút gọn', numbers: false, hl: n >= 3 || ms >= SH_EMIT ? [4] : [1, 2] });
+      g += T(230, 120, '2 mẫu liên tiếp vượt ngưỡng = 1 pha', { size: 20, w: 700, fill: C.muted, anchor: 'middle' });
+      return g;
+    } },
+    { marks: ['tap', 'tap2', 'tap3'], draw(c) {
+      const ms = c.m('tap2').after ? span(c, 'tap2', 1010, TAP_EMIT + 250) : span(c, 'tap', 500, 1010);
+      const rec = SC.tap; const r = sampleAt(rec, ms);
+      // finger animation: taps at 750 and 1000 ms
+      let press = 0; for (const t0 of [750, 1000]) press = Math.max(press, 1 - Math.min(1, Math.abs(ms - t0) / 45));
+      const lift = 70 * (1 - press);
+      let g = armFront(230, 300, 0, { s: 0.7 }) + finger(230 + 24 + lift * 0.45, 300 - 82 - lift, 0.7);
+      for (const t0 of [750, 1000]) { const b = (ms - t0) / 120; if (b > 0 && b < 1) g += burst(236, 222, b, C.energy, 60); }
+      const mag = (t) => 1 + [750, 1000].reduce((s, t0) => s + 0.95 * Math.exp(-Math.pow((t - t0) / 14, 2)), 0);
+      const data = []; for (let t = 500; t <= 1450; t += 5) data.push([t, mag(t)]);
+      const ch = chart({ x: 480, y: 110, w: 740, h: 240, t0: 500, t1: 1450, v0: 0.6, v1: 2.2, until: ms, zero: false,
+        lines: [{ v: 1.75, color: C.enter, label: 'ngưỡng gõ ≈ 0,75 g', dash: '6 6' }], series: [{ data, color: C.z, sw: 4 }], cursor: ms, ylabel: '|a| (g)' });
+      g += ch.svg;
+      // timeline strip: quiet window & confirm window
+      const y = 380, X = ch.X;
+      if (ms >= 1000) {
+        g += R(X(700), y, X(1000) - X(700), 34, { r: 8, fill: C.successBg, stroke: C.success, sw: 2 }) + T((X(700) + X(1000)) / 2, y + 24, '300 ms không xoay > 50 °/s', { size: 17, w: 700, anchor: 'middle', fill: C.success });
+        const k = clamp((ms - 1000) / 150);
+        g += R(X(1000), y + 46, (X(1150) - X(1000)) * k, 34, { r: 8, fill: C.primary }) + R(X(1000), y + 46, X(1150) - X(1000), 34, { r: 8, stroke: C.primary, sw: 2 }) +
+          T(X(1150) + 10, y + 70, '150 ms xác nhận', { size: 17, w: 700, fill: C.primary });
+      }
+      // IMU chip raises the hardware flag
+      const flag = ms >= 1000;
+      g += chipIcon(640, 560, 150, 90, 'IMU', { sub: 'LSM6DS3', pins: 5 });
+      g += L(700, 515, 700, 470, { stroke: C.text, sw: 3 }) + (flag ? P('M700 470 h60 l-12 14 l12 14 h-60 z', { fill: C.danger }) + T(726, 489, 'TAP', { size: 14, w: 700, fill: '#fff', anchor: 'middle' }) : '');
+      g += T(760, 570, flag ? 'Chip tự báo: gõ 2 lần (cách ≤ 538 ms)' : 'Chip đang chờ cú gõ…', { size: 20, w: 700, fill: flag ? C.danger : C.muted });
+      g += T(760, 600, 'thanh ghi TAP_SRC 0x1C, bit 0x10', { size: 17, w: 500, fill: C.muted, mono: true });
+      if (ms >= TAP_EMIT) { const k = clamp((ms - TAP_EMIT) / 200); g += burst(1110, 250, k, C.energy, 100) + appear(chip('YES', 1110, 250, { size: 34 }) + T(1110, 312, '"Có."', { size: 30, w: 700, anchor: 'middle' }), k * 2); }
+      g += T(230, 430, 'Tay yên ở trung tính', { size: 20, w: 700, fill: C.muted, anchor: 'middle' });
+      if (c.m('tap3').after) g += appear(G(R(40, 640, 1200, 56, { r: 14, fill: C.dangerBg, stroke: C.danger, sw: 2 }) + cross(80, 668, 0.55) +
+        T(110, 677, 'Vừa đặt tay xuống bàn: xoay > 50 °/s trong 2 mẫu liền → bỏ qua cờ gõ', { size: 24, w: 700, fill: C.danger })), seg(c.m('tap3').lt, 0.2, 0.7));
+      return g;
+    } },
+    { marks: ['help', 'help2'], draw(c) {
+      const ms = c.m('help2').after ? span(c, 'help2', HELP_D1 + 120, HELP_EMIT + 300) : span(c, 'help', 400, HELP_D1 + 120);
+      const rec = SC.help, r = sampleAt(rec, ms);
+      let g = armSide(110, 330, r.pitch, { s: 0.85 });
+      // bars
+      const bx = 640, by = 520, hh = 340 / 45;
+      const bar = (x, v, col, name) => R(x, by - Math.max(0, v) * hh, 90, Math.max(0, v) * hh, { r: 8, fill: col }) + T(x + 45, by + 34, name, { size: 22, w: 700, anchor: 'middle' }) + T(x + 45, by - Math.max(0, v) * hh - 12, `${fmt(v, 0)}°`, { size: 24, w: 700, anchor: 'middle', mono: true });
+      g += L(bx - 30, by, bx + 280, by, { stroke: C.text, sw: 2 });
+      g += L(bx - 30, by - 25 * hh, bx + 280, by - 25 * hh, { stroke: C.enter, sw: 3, dash: '10 8' }) + T(bx + 286, by - 25 * hh + 7, 'vào 25°', { size: 20, w: 700, fill: C.enter });
+      g += L(bx - 30, by - 12 * hh, bx + 280, by - 12 * hh, { stroke: C.exit, sw: 3, dash: '3 7' }) + T(bx + 286, by - 12 * hh + 7, 'ra 12°', { size: 20, w: 700, fill: C.exit });
+      g += bar(bx, r.filteredPitch, C.y, 'Gập (pitch)') + bar(bx + 160, Math.abs(r.filtered), C.x, 'Nghiêng');
+      const gap = r.filteredPitch - Math.abs(r.filtered);
+      if (r.filteredPitch > 10) g += L(bx + 120, by - r.filteredPitch * hh, bx + 120, by - Math.abs(r.filtered) * hh, { stroke: C.primary, sw: 4 }) +
+        T(bx + 128, by - (r.filteredPitch + Math.abs(r.filtered)) / 2 * hh, gap >= 8 ? 'hơn ≥ 8° ✓' : 'chưa hơn 8°', { size: 18, w: 700, fill: C.primary });
+      g += T(bx + 125, 140, 'pitch = asin(y / |a|)', { size: 26, w: 700, mono: true, anchor: 'middle' });
+      // dip timer ring (one dip must finish within DIP_MAX_MS = 700 ms) + dip counter
+      const emitted = ms >= HELP_EMIT;
+      const hp = emitted ? 1 : r.dipDir ? (r.ms - r.dipStart) / 700 : 0;
+      g += ring(1110, 330, 80, hp, { color: emitted ? C.successBright : C.primary, sw: 18 }) + T(1110, 340, emitted ? '✓' : `${fmt(r.dipDir ? Math.min(700, r.ms - r.dipStart) : 0, 0)}`, { size: 34, w: 700, anchor: 'middle', mono: true }) +
+        T(1110, 440, `Lần nhấp: ${emitted ? 2 : r.dips}/2`, { size: 26, w: 700, anchor: 'middle' }) + T(1110, 472, 'mỗi lần ≤ 700 ms', { size: 20, w: 600, anchor: 'middle', fill: C.muted });
+      if (ms >= HELP_EMIT) { const k = clamp((ms - HELP_EMIT) / 200); g += burst(1110, 330, k, C.energy, 120) + appear(chip('HELP', 1110, 530, { size: 32 }) + T(1110, 595, '"Tôi cần giúp đỡ."', { size: 26, w: 700, anchor: 'middle' }), k * 2); }
+      g += T(260, 640, 'Hạ cẳng tay rồi nâng lại: trục Y chúi xuống rồi về', { size: 20, w: 600, fill: C.muted, anchor: 'middle' });
+      return g;
+    } },
+    { marks: ['helpwhy', 'helpwhy2'], draw(c) {
+      const a = c.m('helpwhy'), b = c.m('helpwhy2'); let g = '';
+      // left: old rule (bend forward and hold) fired on everyday postures
+      g += appear(card(60, 110, 560, 500, { r: 24, stroke: C.danger, sw: 2 }) + T(340, 165, 'Bản cũ: gập và giữ', { size: 32, w: 700, anchor: 'middle', fill: C.danger }), seg(a.lt, 0, 0.5));
+      const held = 32 * ease(seg(a.lt, 0.6, 1.4));
+      g += appear(armSide(130, 260, held, { s: 0.62 }), seg(a.lt, 0.3, 0.8));
+      [['🥤', 'Đưa tay lên uống nước'], ['🪑', 'Đặt cẳng tay lên đùi']].forEach(([ic, s2], i) => {
+        const u = seg(a.lt, 1.6 + i * 0.9, 2.1 + i * 0.9);
+        g += appear(G(R(90, 440 + i * 76, 500, 60, { r: 14, fill: C.dangerBg }) + T(120, 481 + i * 76, ic, { size: 30 }) + T(170, 480 + i * 76, s2, { size: 24, w: 700 }) +
+          T(462, 480 + i * 76, '→', { size: 26, w: 700, fill: C.danger }) + chip('HELP', 535, 470 + i * 76, { size: 18 })), u);
+      });
+      g += appear(T(340, 650, 'Tư thế giữ lâu → báo động giả', { size: 24, w: 700, anchor: 'middle', fill: C.danger }), seg(a.lt, 3.4, 3.9));
+      // right: new rule, two quick dips
+      if (b.after) {
+        g += appear(card(660, 110, 560, 500, { r: 24, stroke: C.success, sw: 3 }) + T(940, 165, 'Bản mới: nhấp nhanh 2 lần', { size: 32, w: 700, anchor: 'middle', fill: C.success }), seg(b.lt, 0, 0.5));
+        g += appear(gestureFigure('HELP', 960, 330, b.lt, 0.7), seg(b.lt, 0.2, 0.7));
+        ['Mỗi lần nhấp ≤ 700 ms', 'Cả 2 lần trong 2 giây', 'Giữ yên lâu: không bao giờ ra HELP'].forEach((s2, i) =>
+          g += appear(G(check(700, 470 + i * 50, 0.5) + T(730, 478 + i * 50, s2, { size: 24, w: 700 })), seg(b.lt, 0.8 + i * 0.6, 1.3 + i * 0.6)));
+      }
+      return g;
+    } },
+    { marks: ['sum'], draw(c) {
+      const items = [['Ngưỡng', 'vào 22° / ra 12°', 'gập: vào 25°'], ['Thời gian', 'giữ 250 ms (trái/phải)', 'HELP: 2 lần nhấp ≤ 2 s'], ['Nghỉ + trung tính', 'nghỉ 650 ms', 'trung tính 200 ms']];
+      let g = '';
+      items.forEach(([a, b, d], i) => g += appear(card(80 + i * 380, 190, 350, 300, { r: 24 }) + T(255 + i * 380, 260, a, { size: 32, w: 700, anchor: 'middle', fill: C.primary }) +
+        T(255 + i * 380, 340, b, { size: 26, w: 600, anchor: 'middle' }) + T(255 + i * 380, 390, d, { size: 26, w: 600, anchor: 'middle' }), seg(c.lt, 0.3 + i * 0.9, 0.8 + i * 0.9)));
+      g += appear(T(640, 580, 'Không phát nhầm · Không phát lặp', { size: 34, w: 700, anchor: 'middle', fill: C.success }), seg(c.lt, 3, 3.6));
+      return g;
+    } },
+  ],
+});
+</script></body></html>

@@ -1,0 +1,93 @@
+WEBVTT
+Kind: subtitles
+Language: vi
+
+1
+00:00:01.000 --> 00:00:03.778
+Toàn cảnh BandW trong 90 giây.
+
+2
+00:00:03.978 --> 00:00:09.537
+Có những người không nói được, ví dụ sau
+đột quỵ, nhưng vẫn cử động được cổ tay.
+
+3
+00:00:09.737 --> 00:00:15.156
+BandW biến một cử động cổ tay thành một
+câu nói tiếng Việt trên điện thoại.
+
+4
+00:00:15.356 --> 00:00:19.312
+Vòng tay hiểu năm cử chỉ, mỗi cử chỉ là
+một câu.
+
+5
+00:00:19.512 --> 00:00:22.193
+Nghiêng tay trái: "Tôi muốn uống nước."
+
+6
+00:00:22.912 --> 00:00:25.512
+Nghiêng tay phải: "Tôi muốn ăn."
+
+7
+00:00:26.312 --> 00:00:28.912
+Lắc cổ tay: "Không."
+
+8
+00:00:29.712 --> 00:00:32.312
+Gõ nhẹ 2 lần: "Có."
+
+9
+00:00:33.112 --> 00:00:37.301
+Hạ cẳng tay rồi nâng lại, 2 lần: "Tôi cần
+giúp đỡ."
+
+10
+00:00:37.501 --> 00:00:41.365
+Hãy theo dõi một cử chỉ nghiêng trái đi
+qua cả hệ thống.
+
+11
+00:00:41.565 --> 00:00:47.463
+Cảm biến IMU trên bo mạch đo gia tốc và
+tốc độ xoay, 50 lần mỗi giây.
+
+12
+00:00:47.663 --> 00:00:55.125
+Chip nRF52840 so sánh số liệu với các
+ngưỡng và quyết định: đây là lệnh WATER.
+
+13
+00:00:55.325 --> 00:01:00.944
+Qua Bluetooth Low Energy, vòng tay chỉ gửi
+đúng một từ ngắn: WATER.
+
+14
+00:01:01.144 --> 00:01:05.965
+Ứng dụng Android tra bảng và hiện chữ lớn:
+"Tôi muốn uống nước."
+
+15
+00:01:06.165 --> 00:01:09.239
+Rồi giọng đọc tiếng Việt phát câu đó ra
+loa.
+
+16
+00:01:09.439 --> 00:01:13.137
+Mọi quyết định dựa trên luật rõ ràng,
+không dùng học máy,
+
+17
+00:01:13.137 --> 00:01:15.670
+nên em giải thích được từng bước.
+
+18
+00:01:15.870 --> 00:01:20.191
+Không dùng camera hay micro, và không cần
+máy chủ.
+
+19
+00:01:20.391 --> 00:01:24.083
+Các bài tiếp theo sẽ mở từng khối ra xem
+bên trong.
+

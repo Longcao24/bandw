@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><title>v-imu-tilt</title>
+<style>html,body{margin:0;background:#f7f8fa;overflow:hidden;width:1280px;height:720px}svg{display:block}</style></head>
+<body><svg id="stage" xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"></svg>
+<script type="module">
+import { makeScene, C, CMD, T, R, L, Ci, P, G, arrow, card, pill, chip, para, armFront, armSide, gravityTriangle, chipIcon, chart, gauge,
+  check, appear, caption, ease, easeOut, clamp, seg, lerp, fmt, rad } from './scene-lib.js';
+
+function board(cx, cy, hl) { // XIAO nRF52840 Sense, top view (schematic)
+  let g = R(cx - 150, cy - 190, 300, 380, { r: 26, fill: C.pcb, shadow: true });
+  g += R(cx - 46, cy - 214, 92, 54, { r: 12, fill: '#c9ced8', stroke: '#8a93a3', sw: 2 }) + T(cx, cy - 180, 'USB-C', { size: 18, w: 700, anchor: 'middle', fill: '#3b4252' });
+  for (let i = 0; i < 7; i++) { g += Ci(cx - 128, cy - 130 + i * 44, 10, { fill: '#e8c46b' }) + Ci(cx + 128, cy - 130 + i * 44, 10, { fill: '#e8c46b' }); }
+  g += chipIcon(cx, cy - 30, 130, 120, 'nRF52840', { pins: 0, size: 20, fill: '#2b3245' });
+  const on = hl ? 1 : 0;
+  if (on) g += R(cx - 72, cy + 70, 144, 96, { r: 18, fill: C.energy, op: 0.35 });
+  g += chipIcon(cx, cy + 118, 100, 64, 'IMU', { pins: 0, size: 22, fill: '#11151f' });
+  g += Ci(cx + 92, cy - 150, 9, { fill: '#2fd06b' });
+  return g;
+}
+function bars(x, y, roll, o = {}) { // x and z components as horizontal bars
+  const r = rad(roll), xv = Math.sin(r), zv = Math.cos(r);
+  let g = card(x, y, 440, 190, { r: 18 });
+  const row = (i, name, v, col) => {
+    const yy = y + 60 + i * 76, w = 260;
+    return T(x + 26, yy + 10, name, { size: 30, w: 700, fill: col }) + R(x + 70, yy - 14, w, 32, { r: 8, fill: C.surface2 }) +
+      L(x + 70 + w / 2, yy - 20, x + 70 + w / 2, yy + 24, { stroke: '#9aa3b2', sw: 2 }) +
+      R(v < 0 ? x + 70 + w / 2 + v * w / 2 : x + 70 + w / 2, yy - 14, Math.abs(v) * w / 2, 32, { r: 6, fill: col }) +
+      T(x + 420, yy + 10, fmt(v), { size: 28, w: 700, anchor: 'end', mono: true });
+  };
+  return g + row(0, 'x', xv, C.x) + row(1, 'z', zv, C.z);
+}
+const tiltState = (a) => Math.abs(a) < 12 ? ['Trung tính', C.success] : Math.abs(a) <= 22 ? ['Vùng trễ (12°–22°)', C.warn] : a < 0 ? ['Nghiêng trái → WATER', CMD.WATER.ink] : ['Nghiêng phải → FOOD', CMD.FOOD.ink];
+
+makeScene({
+  id: 'v-imu-tilt', title: 'Cảm biến IMU và góc nghiêng',
+  shots: [
+    { marks: ['imu', 'axes'], draw(c) {
+      const ax = c.m('axes'); let g = '';
+      if (!ax.after) {
+        const p = c.m('imu');
+        g += appear(board(360, 380, p.lt > 1.5), seg(p.lt, 0, 0.6));
+        g += appear(card(620, 230, 560, 300, { r: 22 }) + T(660, 300, 'IMU (LSM6DS3)', { size: 34, w: 700, fill: C.primary }) +
+          T(660, 370, '① Gia tốc kế (accelerometer)', { size: 28, w: 600 }) + T(700, 405, 'đo gia tốc, đơn vị g', { size: 22, w: 500, fill: C.muted }) +
+          T(660, 460, '② Con quay hồi chuyển (gyroscope)', { size: 28, w: 600 }) + T(700, 495, 'đo tốc độ xoay, đơn vị °/s', { size: 22, w: 500, fill: C.muted }), seg(p.lt, 1.5, 2.2));
+        if (p.lt > 1.5) g += arrow(450, 500, 615, 420, { stroke: C.energy, sw: 5 });
+      } else {
+        g += armFront(380, 430, 0, { s: 1.15, axes: true, axisY: true });
+        g += T(380, 650, 'Nhìn từ phía sau bàn tay', { size: 22, w: 600, fill: C.muted, anchor: 'middle' });
+        g += appear(armSide(760, 470, 0, { s: 0.95, axes: true }) + T(960, 650, 'Nhìn từ bên cạnh', { size: 22, w: 600, fill: C.muted, anchor: 'middle' }), seg(ax.lt, 1.5, 2.2));
+        const items = [['X', 'sang ngang (trái ↔ phải)', C.x], ['Y', 'dọc theo cẳng tay', C.y], ['Z', 'hướng lên trên', C.z]];
+        items.forEach(([n, s, col], i) => g += appear(T(720, 150 + i * 52, n, { size: 34, w: 700, fill: col }) + T(760, 150 + i * 52, s, { size: 28, w: 600 }), seg(ax.lt, 0.5 + i * 1.2, 1.0 + i * 1.2)));
+      }
+      return g;
+    } },
+    { marks: ['gravity', 'flat', 'tilt', 'atan', 'example', 'baseline', 'thresh', 'dir'], draw(c) {
+      const m = (k) => c.m(k);
+      let roll = 0;
+      if (m('tilt').after) roll = -30 * ease(seg(c.t, m('tilt').start + 0.5, m('tilt').end - 0.6));
+      if (m('thresh').after) { const u = m('thresh').lt; roll = u < 2 ? lerp(-30, -30, 0) : u < 4.5 ? lerp(-30, -16, ease(seg(u, 2, 3.5))) : lerp(-16, -6, ease(seg(u, 4.5, 6))); }
+      if (m('dir').after) { const u = m('dir').lt; roll = u < 2.6 ? lerp(-6, -32, ease(seg(u, 0.2, 1.2))) : lerp(-32, 32, ease(seg(u, 2.6, 4))); }
+      const cx = 330, cy = 430;
+      let g = armFront(cx, cy, roll, { s: 0.95, axes: !m('thresh').after });
+      // gravity at board centre (board is 70*s above arm centre, rotated with roll)
+      const bx = cx + Math.sin(rad(roll)) * 66, by = cy - Math.cos(rad(roll)) * 66;
+      if (!m('thresh').after) g += appear(gravityTriangle(bx, by, roll, 190, { labels: false }) + T(bx + 14, by + 184, 'g = 1 g', { size: 26, w: 700, fill: C.g }), seg(m('gravity').lt, 0.8, 1.6));
+      if (!m('flat').after) g += appear(T(cx + 40, 560 + 60, 'Trọng lực ≈ 1 g, luôn hướng xuống', { size: 26, w: 700, fill: C.g, anchor: 'middle' }), seg(m('gravity').lt, 1.4, 2));
+      const ang = Math.atan2(Math.sin(rad(roll)), Math.cos(rad(roll))) * 57.2957795;
+      if (m('flat').after && !m('thresh').after) {
+        g += bars(720, 110, roll);
+        if (m('atan').after) {
+          const e = seg(m('atan').lt, 0.3, 1);
+          g += appear(card(720, 330, 440, m('example').after ? 250 : 150, { r: 18 }) + T(750, 385, 'góc = atan2(x, z) × 57,3', { size: 32, w: 700, mono: false }) +
+            T(750, 430, '57,3 ≈ 180 / π: đổi radian → độ', { size: 21, w: 500, fill: C.muted }), e);
+          if (m('example').after) g += appear(T(750, 490, `atan2(${fmt(Math.sin(rad(roll)))}; ${fmt(Math.cos(rad(roll)))}) × 57,3`, { size: 26, w: 600, mono: true }) +
+            T(750, 545, `≈ ${fmt(ang, 0)}°  ← nghiêng trái 30°`, { size: 32, w: 700, fill: C.primary }), seg(m('example').lt, 0.4, 1));
+        }
+        if (m('baseline').after) {
+          const u = m('baseline').lt;
+          g = armFront(cx, cy, roll, { s: 0.95 }) + bars(720, 110, roll);
+          g += appear(card(620, 320, 600, 300, { r: 18 }) + T(650, 368, 'góc đo − góc trung tính → lọc mượt', { size: 26, w: 700 }), seg(u, 0, 0.5));
+          const raw = [], filt = []; let f = 0;
+          for (let i = 0; i <= 60; i++) { const v = i < 10 ? 0 : -30 + 3 * Math.sin(i * 1.9); raw.push([i, v]); f += 0.22 * (v - f); filt.push([i, f]); }
+          const ch = chart({ x: 650, y: 390, w: 540, h: 200, t0: 0, t1: 60, v0: -40, v1: 10, until: 60 * seg(u, 0.8, u + 0.1 > 4 ? 4 : 4),
+            series: [{ data: raw, color: '#b9bfca', sw: 3 }, { data: filt, color: C.primary, sw: 5 }] });
+          g += appear(ch.svg + T(1180, 420, 'thô', { size: 20, w: 700, fill: C.muted, anchor: 'end' }) + T(1180, 445, 'đã lọc (α = 0,22)', { size: 20, w: 700, fill: C.primary, anchor: 'end' }), seg(u, 0.6, 1.1));
+        }
+      }
+      if (m('thresh').after) {
+        const [st, col] = tiltState(roll);
+        g += gauge(900, 440, 230, -60, 60, roll, { zones: [{ from: -60, to: -22, fill: CMD.WATER.color }, { from: 22, to: 60, fill: CMD.FOOD.color }, { from: -12, to: 12, fill: '#cfeedd' }],
+          ticks: [{ v: -22, color: C.enter, label: '−22°' }, { v: -12, color: C.exit, label: '−12°' }, { v: 12, color: C.exit, label: '12°' }, { v: 22, color: C.enter, label: '22°' }] });
+        g += T(900, 520, `${fmt(roll, 0)}°`, { size: 48, w: 700, anchor: 'middle', mono: true });
+        g += pill(900, 590, st, { size: 28, anchor: 'middle', fill: '#fff', ink: col, stroke: col, sw: 2.5 });
+        if (m('dir').after) g += T(690, 400, 'WATER', { size: 26, w: 700, fill: CMD.WATER.ink, anchor: 'middle', mono: true }) + T(1110, 400, 'FOOD', { size: 26, w: 700, fill: CMD.FOOD.ink, anchor: 'middle', mono: true });
+        g += T(900, 140, 'Ngưỡng vào 22° · ngưỡng ra 12°', { size: 30, w: 700, anchor: 'middle' });
+      }
+      return g;
+    } },
+    { marks: ['vertical'], draw(c) {
+      const u = c.lt; const pitch = -78 * ease(seg(u, 0.4, 2.2));
+      const q = rad(pitch); const plane = Math.abs(Math.cos(q));
+      let g = armSide(330, 560, pitch, { s: 0.9 });
+      g += card(700, 170, 480, 360, { r: 22 });
+      g += T(740, 230, '√(x² + z²)', { size: 34, w: 700 });
+      g += R(740, 270, 330, 40, { r: 10, fill: C.surface2 }) + R(740, 270, 330 * plane, 40, { r: 10, fill: plane < 0.4 ? C.danger : C.z });
+      g += L(740 + 132, 258, 740 + 132, 322, { stroke: C.enter, sw: 4, dash: '6 6' }) + T(872, 350, '0,4 g', { size: 22, w: 700, fill: C.enter, anchor: 'middle' });
+      g += T(1150, 300, fmt(plane), { size: 28, w: 700, mono: true, anchor: 'end' });
+      g += plane < 0.4 ? appear(T(740, 420, '🔒 Khoá góc nghiêng', { size: 32, w: 700, fill: C.danger }) + T(740, 465, 'x và z quá nhỏ → góc chỉ còn là nhiễu', { size: 22, w: 500, fill: C.muted }), seg(u, 2.2, 2.8))
+        : T(740, 420, 'Cẳng tay nằm ngang: đo được', { size: 26, w: 600, fill: C.success });
+      return g;
+    } },
+    { marks: ['gyro', 'gyro-still', 'gyro-shake', 'sum'], draw(c) {
+      const st = c.m('gyro-still'), sh = c.m('gyro-shake'), sum = c.m('sum');
+      if (sum.after) {
+        let g = '';
+        g += appear(card(90, 170, 520, 380, { r: 24 }) + T(130, 240, 'Gia tốc kế', { size: 38, w: 700, fill: C.z }) + T(130, 290, 'Tay đang nghiêng bao nhiêu?', { size: 26, w: 600 }) +
+          T(130, 360, 'đơn vị: g → góc (°)', { size: 24, w: 500, fill: C.muted }) + T(130, 430, 'WATER · FOOD · HELP', { size: 26, w: 700, mono: true }), seg(sum.lt, 0, 0.6));
+        g += appear(card(670, 170, 520, 380, { r: 24 }) + T(710, 240, 'Con quay', { size: 38, w: 700, fill: C.g }) + T(710, 290, 'Tay đang xoay nhanh cỡ nào?', { size: 26, w: 600 }) +
+          T(710, 360, 'đơn vị: °/s', { size: 24, w: 500, fill: C.muted }) + T(710, 430, 'NO (lắc)', { size: 26, w: 700, mono: true }), seg(sum.lt, 0.8, 1.4));
+        return g;
+      }
+      // roll profile: tilt-and-hold during gyro-still, shake during gyro-shake
+      const T0 = c.m('gyro').start; const total = c.t - T0;
+      const rollAt = (t) => {
+        if (t < st.start - T0) return -10 * Math.sin(t * 1.2);
+        if (t < sh.start - T0) { const k = t - (st.start - T0); return k < 0.8 ? lerp(-10 * Math.sin((st.start - T0) * 1.2), -35, ease(k / 0.8)) : -35; }
+        const k = t - (sh.start - T0); const amp = 12 * clamp(k / 0.3) * (1 - seg(k, sh.dur - 1, sh.dur - 0.3));
+        return lerp(-35, 0, ease(clamp(k / 0.4))) + amp * Math.sin(k * Math.PI * 2 * 3);
+      };
+      const gyAt = (t) => (rollAt(t + 0.01) - rollAt(t - 0.01)) / 0.02;
+      const roll = rollAt(total), gy = gyAt(total);
+      let g = armFront(300, 440, roll, { s: 0.95 });
+      g += gauge(860, 330, 190, -300, 300, gy, { sw: 28, zones: [{ from: -300, to: -100, fill: '#f6d1cc' }, { from: 100, to: 300, fill: '#f6d1cc' }, { from: -40, to: 40, fill: '#cfeedd' }],
+        ticks: [{ v: -100, color: C.enter, label: '−100' }, { v: 100, color: C.enter, label: '100' }, { v: 0, label: '0' }], needle: C.g });
+      g += T(860, 410, `gy = ${fmt(gy, 0)} °/s`, { size: 34, w: 700, anchor: 'middle', mono: true, fill: C.g });
+      const data = []; for (let i = 0; i <= 120; i++) { const tt = total - 4 + i * 4 / 120; if (tt >= 0) data.push([tt, gyAt(tt)]); }
+      const ch = chart({ x: 640, y: 460, w: 540, h: 170, t0: total - 4, t1: total, v0: -300, v1: 300,
+        lines: [{ v: 100, color: C.enter }, { v: -100, color: C.enter }], series: [{ data, color: C.g, sw: 4 }] });
+      g += ch.svg + T(1180, 452, '- - - ngưỡng lắc ±100 °/s', { size: 18, w: 700, fill: C.enter, anchor: 'end' });
+      g += T(300, 160, `Góc nghiêng: ${fmt(roll, 0)}°`, { size: 28, w: 700, anchor: 'middle' });
+      if (st.after && !sh.after) g += appear(pill(300, 680 - 30, 'Nghiêng yên → con quay ≈ 0', { size: 24, anchor: 'middle', fill: C.successBg, ink: C.success }), seg(st.lt, 1, 1.5));
+      if (sh.after) g += appear(pill(300, 650, 'Lắc → vượt ±100 °/s, đổi chiều', { size: 24, anchor: 'middle', fill: C.dangerBg, ink: C.danger }), seg(sh.lt, 1, 1.5));
+      return g;
+    } },
+  ],
+});
+</script></body></html>

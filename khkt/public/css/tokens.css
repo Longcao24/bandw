@@ -1,0 +1,50 @@
+/* Design tokens (spec §9.1). Light by default; dark via OS preference or data-theme="dark". */
+:root {
+  --c-bg:#f7f8fa; --c-surface:#ffffff; --c-surface-2:#f0f2f5; --c-border:#d6d8de;
+  --c-text:#21242c; --c-muted:#5b616e; --c-text-on-light:#21242c;
+  --c-primary:#1865f2; --c-primary-ink:#ffffff; --c-primary-soft:#e8f0fe;
+  --c-success:#0d7a35; --c-success-bg:#e3f5e8; --c-danger:#c4280f; --c-danger-bg:#fdecea;
+  --c-warn:#9a5200; --c-warn-bg:#fff3e0; --c-energy:#f2a900; --c-streak:#e8590c; --c-focus:#1865f2;
+  --viz-x:#e5484d; --viz-y:#2f9e5b; --viz-z:#0b7ae0; --viz-g:#8e4ec6;
+  --viz-enter:#d92916; --viz-exit:#b35c00; --viz-neutral:rgba(47,158,91,.15); --viz-packet:#1865f2;
+  --u-blue:#1865f2; --u-teal:#0a8f8f; --u-green:#2f9e44; --u-amber:#c27c00; --u-orange:#e8590c;
+  --u-red:#d6336c; --u-purple:#7048e8; --u-pink:#c2255c;
+  --radius:12px; --radius-sm:8px; --shadow:0 1px 2px rgba(0,0,0,.06),0 4px 12px rgba(0,0,0,.06);
+  --shadow-lg:0 2px 4px rgba(0,0,0,.06),0 12px 32px rgba(0,0,0,.10);
+  --font:'Be Vietnam Pro',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+  --fs-sm:14px; --fs-base:17px; --fs-lg:20px; --fs-xl:24px; --fs-2xl:30px; --lh:1.6;
+  --space:8px; --tap:44px; --content:760px; --wide:1120px;
+  --header-h:56px;
+  --code-bg:#f6f8fb; --tok-kw:#8b2fc9; --tok-str:#0a7d3e; --tok-num:#b35c00; --tok-com:#6b7280; --tok-fn:#0b62c4; --tok-type:#a1006b; --tok-const:#b4235a; --tok-pre:#8b2fc9;
+  --pair-0:#1865f2; --pair-1:#0a8f8f; --pair-2:#c27c00; --pair-3:#7048e8; --pair-4:#d6336c; --pair-5:#2f9e44;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --c-bg:#0f1218; --c-surface:#181c24; --c-surface-2:#20252f; --c-border:#2e3440; --c-text:#e8eaed; --c-muted:#a3a9b5;
+    --c-primary:#6ea3ff; --c-primary-ink:#0b1020; --c-primary-soft:#1b2a45;
+    --c-success:#56c975; --c-success-bg:#12301d; --c-danger:#ff7b6b; --c-danger-bg:#3a1714; --c-warn:#ffb24d; --c-warn-bg:#3a2a10;
+    --c-focus:#6ea3ff;
+    --viz-x:#ff6b6f; --viz-y:#5ed18a; --viz-z:#4aa8ff; --viz-g:#b98cf0; --viz-enter:#ff6b5b; --viz-exit:#ffb24d;
+    --viz-neutral:rgba(94,209,138,.18); --viz-packet:#6ea3ff;
+    --u-blue:#6ea3ff; --u-teal:#3cc4c4; --u-green:#5cc46f; --u-amber:#f0a92e; --u-orange:#ff8a45; --u-red:#f06595; --u-purple:#9b7cff; --u-pink:#f0659a;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 12px rgba(0,0,0,.3); --shadow-lg:0 2px 4px rgba(0,0,0,.4),0 12px 32px rgba(0,0,0,.45);
+    --code-bg:#12161d; --tok-kw:#c792ea; --tok-str:#7fd99a; --tok-num:#ffb86b; --tok-com:#8b93a1; --tok-fn:#82b1ff; --tok-type:#f78cc5; --tok-const:#ff9cb8; --tok-pre:#c792ea;
+    --pair-0:#6ea3ff; --pair-1:#3cc4c4; --pair-2:#f0a92e; --pair-3:#9b7cff; --pair-4:#f06595; --pair-5:#5cc46f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --c-bg:#0f1218; --c-surface:#181c24; --c-surface-2:#20252f; --c-border:#2e3440; --c-text:#e8eaed; --c-muted:#a3a9b5;
+  --c-primary:#6ea3ff; --c-primary-ink:#0b1020; --c-primary-soft:#1b2a45;
+  --c-success:#56c975; --c-success-bg:#12301d; --c-danger:#ff7b6b; --c-danger-bg:#3a1714; --c-warn:#ffb24d; --c-warn-bg:#3a2a10;
+  --c-focus:#6ea3ff;
+  --viz-x:#ff6b6f; --viz-y:#5ed18a; --viz-z:#4aa8ff; --viz-g:#b98cf0; --viz-enter:#ff6b5b; --viz-exit:#ffb24d;
+  --viz-neutral:rgba(94,209,138,.18); --viz-packet:#6ea3ff;
+  --u-blue:#6ea3ff; --u-teal:#3cc4c4; --u-green:#5cc46f; --u-amber:#f0a92e; --u-orange:#ff8a45; --u-red:#f06595; --u-purple:#9b7cff; --u-pink:#f0659a;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 12px rgba(0,0,0,.3); --shadow-lg:0 2px 4px rgba(0,0,0,.4),0 12px 32px rgba(0,0,0,.45);
+  --code-bg:#12161d; --tok-kw:#c792ea; --tok-str:#7fd99a; --tok-num:#ffb86b; --tok-com:#8b93a1; --tok-fn:#82b1ff; --tok-type:#f78cc5; --tok-const:#ff9cb8; --tok-pre:#c792ea;
+  --pair-0:#6ea3ff; --pair-1:#3cc4c4; --pair-2:#f0a92e; --pair-3:#9b7cff; --pair-4:#f06595; --pair-5:#5cc46f;
+  color-scheme: dark;
+}

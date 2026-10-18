@@ -1,0 +1,44 @@
+# title: Hiệu chuẩn tư thế trung tính
+
+@intro
+Hiệu chuẩn tư thế trung tính.
+
+@why | Vì sao cần
+Mỗi người để tay nghỉ ở một góc khác nhau. Có người hơi nghiêng sẵn 15°.
+~ Mỗi người để tay nghỉ ở một góc khác nhau. Có người hơi nghiêng sẵn mười lăm độ.
+
+@why2
+Nếu không hiệu chuẩn, chỉ cần nghiêng thêm 7° là vượt ngưỡng 22°, dễ phát lệnh nhầm.
+~ Nếu không hiệu chuẩn, người đó chỉ cần nghiêng thêm bảy độ là đã vượt ngưỡng hai mươi hai độ, rất dễ phát lệnh nhầm.
+
+@samples | 100 mẫu
+Vì vậy vòng tay ghi lại tư thế nghỉ: giữ yên tay khoảng 2 giây để lấy 100 mẫu.
+~ Vì vậy vòng tay ghi lại tư thế nghỉ: em giữ yên tay khoảng hai giây, để vòng tay lấy một trăm mẫu.
+
+@rules
+Mẫu tốt khi gia tốc gần 1 g, tay xoay chậm hơn 20 °/s, và gần với trung bình các mẫu trước.
+~ Một mẫu tốt khi độ lớn gia tốc gần một g, tay xoay chậm hơn hai mươi độ trên giây, và gần với trung bình các mẫu trước.
+
+@mean
+Đủ 100 mẫu, vòng tay lấy trung bình và tính góc mốc: atan2 của x và z trung bình.
+~ Khi đủ một trăm mẫu, vòng tay lấy trung bình, và tính góc mốc bằng a tan hai của x và z trung bình.
+
+@tremor | Loại mẫu rung
+Nếu tay run nhẹ, vài mẫu bị loại nhưng vẫn đếm tiếp. Vòng tay chịu được tối đa 10 mẫu rung.
+~ Nếu tay run nhẹ, vài mẫu bị loại, nhưng vòng tay vẫn đếm tiếp. Nó chịu được tối đa mười mẫu rung.
+
+@reset
+Quá 10 mẫu rung thì bộ đếm bắt đầu lại từ đầu.
+~ Quá mười mẫu rung, thì bộ đếm bắt đầu lại từ đầu.
+
+@trigger
+Hiệu chuẩn chạy khi bật nguồn, khi app gửi lệnh CALIBRATE, hoặc sau 1 giây dữ liệu cảm biến bị lỗi.
+~ Hiệu chuẩn chạy khi bật nguồn, khi ứng dụng gửi lệnh CALIBRATE, hoặc sau một giây dữ liệu cảm biến bị lỗi.
+
+@led | Đèn LED
+Đèn LED nháy nhanh là đang hiệu chuẩn, nháy chậm là chờ app, chớp ngắn mỗi 2 giây là sẵn sàng.
+~ Đèn LED nháy nhanh là đang hiệu chuẩn, nháy chậm là đang chờ ứng dụng, còn chớp ngắn mỗi hai giây là đã sẵn sàng.
+
+@done
+Xong, vòng tay báo READY cho app. Từ giờ mọi góc đều đo so với mốc riêng của người đeo.
+~ Xong, vòng tay báo READY cho ứng dụng. Từ giờ, mọi góc đều được đo so với mốc riêng của người đeo.

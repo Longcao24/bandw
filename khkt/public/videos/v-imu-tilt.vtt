@@ -1,0 +1,102 @@
+WEBVTT
+Kind: subtitles
+Language: vi
+
+1
+00:00:01.000 --> 00:00:03.415
+Cảm biến IMU và góc nghiêng.
+
+2
+00:00:03.615 --> 00:00:07.080
+Trên bo mạch XIAO có một chip nhỏ tên là
+IMU,
+
+3
+00:00:07.080 --> 00:00:10.288
+gồm gia tốc kế và con quay hồi chuyển.
+
+4
+00:00:10.488 --> 00:00:17.939
+Gia tốc kế đo theo ba trục: X sang ngang,
+Y dọc theo cẳng tay, Z hướng lên trên.
+
+5
+00:00:18.139 --> 00:00:24.490
+Khi tay đứng yên, gia tốc kế vẫn cảm nhận
+trọng lực, khoảng 1 g, hướng xuống đất.
+
+6
+00:00:24.690 --> 00:00:28.702
+Đặt tay phẳng, gần như toàn bộ 1 g nằm
+trên trục Z.
+
+7
+00:00:28.902 --> 00:00:35.507
+Nghiêng tay sang trái, trọng lực chia sang
+hai trục: phần x lớn dần, phần z nhỏ dần.
+
+8
+00:00:35.707 --> 00:00:40.820
+Từ hai thành phần x và z, hàm atan2 tính
+ra góc nghiêng,
+
+9
+00:00:40.820 --> 00:00:43.976
+rồi nhân 57,3 để đổi sang độ.
+
+10
+00:00:44.176 --> 00:00:52.950
+Ví dụ x = −0,5 và z = 0,87 thì góc khoảng
+−30°, tức là nghiêng trái 30°.
+
+11
+00:00:53.150 --> 00:00:59.219
+BandW lấy góc này trừ đi góc của tư thế
+trung tính, rồi làm mượt bằng bộ lọc.
+
+12
+00:00:59.419 --> 00:01:02.603
+Vượt quá 22° là bắt đầu tính nghiêng.
+
+13
+00:01:02.603 --> 00:01:06.695
+Phải về dưới 12° mới coi là trung tính trở
+lại.
+
+14
+00:01:06.895 --> 00:01:09.451
+Góc âm là nghiêng trái, lệnh WATER.
+
+15
+00:01:09.451 --> 00:01:12.325
+Góc dương là nghiêng phải, lệnh FOOD.
+
+16
+00:01:12.525 --> 00:01:18.404
+Nếu cẳng tay dựng đứng, x và z đều quá
+nhỏ, nên vòng tay khoá góc nghiêng lại.
+
+17
+00:01:18.604 --> 00:01:23.945
+Con quay hồi chuyển thì khác: nó đo tốc độ
+xoay, đơn vị độ trên giây.
+
+18
+00:01:24.145 --> 00:01:28.391
+Giữ tay nghiêng yên, con quay vẫn chỉ gần
+0.
+
+19
+00:01:28.591 --> 00:01:33.300
+Lắc cổ tay, kim vọt quá 100 °/s rồi đổi
+chiều liên tục.
+
+20
+00:01:33.300 --> 00:01:36.640
+Đó là dấu hiệu của cử chỉ "Không".
+
+21
+00:01:36.840 --> 00:01:44.784
+Gia tốc kế cho biết tay nghiêng bao nhiêu,
+con quay cho biết tay xoay nhanh cỡ nào.
+

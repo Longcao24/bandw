@@ -1,0 +1,95 @@
+WEBVTT
+Kind: subtitles
+Language: vi
+
+1
+00:00:01.000 --> 00:00:03.992
+Vòng lặp loop() mỗi 20 ms.
+
+2
+00:00:04.192 --> 00:00:09.902
+Khi bật nguồn, hàm setup() chạy đúng 1
+lần: cài cảm biến, bật Bluetooth,
+
+3
+00:00:09.902 --> 00:00:13.029
+bắt đầu hiệu chuẩn, bật watchdog.
+
+4
+00:00:13.229 --> 00:00:17.205
+Sau đó hàm loop() chạy lặp đi lặp lại, mãi
+mãi.
+
+5
+00:00:17.405 --> 00:00:21.556
+Đầu mỗi vòng, chip báo cho watchdog: "tôi
+vẫn chạy".
+
+6
+00:00:21.556 --> 00:00:25.353
+Nếu treo quá 4 giây, board tự khởi động
+lại.
+
+7
+00:00:25.553 --> 00:00:29.000
+Tiếp theo BLE.poll() xử lý Bluetooth,
+
+8
+00:00:29.000 --> 00:00:33.567
+rồi kiểm tra lệnh hiệu chuẩn và cập nhật
+đèn LED.
+
+9
+00:00:33.767 --> 00:00:37.150
+Chưa đủ 20 ms kể từ lần đọc trước?
+
+10
+00:00:37.150 --> 00:00:41.457
+Chương trình nghỉ 1 ms rồi quay lại từ
+đầu.
+
+11
+00:00:41.657 --> 00:00:46.178
+Đủ 20 ms thì đọc cảm biến: 6 trục trong
+một lần đọc.
+
+12
+00:00:46.178 --> 00:00:48.713
+Vậy là 50 mẫu mỗi giây.
+
+13
+00:00:48.913 --> 00:00:50.491
+Mẫu lỗi bị bỏ qua.
+
+14
+00:00:50.491 --> 00:00:54.332
+Nếu chưa hiệu chuẩn, mẫu được đưa vào bộ
+hiệu chuẩn.
+
+15
+00:00:54.532 --> 00:00:58.678
+Còn không, detector.update() so mẫu với
+các ngưỡng.
+
+16
+00:00:58.678 --> 00:01:02.462
+Hầu hết các vòng, kết quả là "không có
+gì".
+
+17
+00:01:02.662 --> 00:01:05.616
+Khi có cử chỉ và app đã đăng ký,
+
+18
+00:01:05.616 --> 00:01:10.394
+vòng tay ghi chữ "WATER" vào
+characteristic để gửi đi.
+
+19
+00:01:10.594 --> 00:01:13.808
+Đọc, kiểm tra, gửi: 50 lần mỗi giây.
+
+20
+00:01:13.808 --> 00:01:16.638
+Đó là nhịp tim của firmware.
+

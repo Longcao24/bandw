@@ -1,0 +1,36 @@
+# title: Ứng dụng nhận lệnh và đọc thành tiếng
+
+@intro
+Ứng dụng nhận lệnh và đọc thành tiếng.
+
+@receive | Nhận
+Điện thoại nhận 5 byte và đổi chúng thành chuỗi chữ "WATER".
+~ Điện thoại nhận được năm byte, và đổi chúng thành chuỗi chữ WATER.
+
+@parse | Hiểu lệnh
+Hàm parse() bỏ khoảng trắng, đổi sang chữ in hoa, rồi tìm trong danh sách 5 lệnh.
+~ Hàm parse bỏ khoảng trắng, đổi sang chữ in hoa, rồi tìm trong danh sách năm lệnh.
+
+@enum
+Mỗi lệnh trong GestureCommand mang sẵn câu nói, nhãn cử chỉ và màu thẻ.
+~ Mỗi lệnh trong Gesture Command mang sẵn câu nói, nhãn cử chỉ, và màu thẻ.
+
+@invalid
+Nếu nhận chuỗi lạ như "HELLO", parse() trả về null và app bỏ qua, không đọc gì.
+~ Nếu nhận một chuỗi lạ như HELLO, parse trả về rỗng, và ứng dụng bỏ qua, không đọc gì.
+
+@display | Hiển thị
+App hiện câu "Tôi muốn uống nước." bằng chữ lớn và thêm vào lịch sử 5 lệnh gần nhất.
+~ Ứng dụng hiện câu: Tôi muốn uống nước, bằng chữ lớn, và thêm vào lịch sử năm lệnh gần nhất.
+
+@speak | Đọc
+Rồi TextToSpeech đọc câu bằng giọng tiếng Việt, tốc độ 0,9 cho dễ nghe.
+~ Rồi Text to Speech đọc câu bằng giọng tiếng Việt, tốc độ không phẩy chín, cho dễ nghe.
+
+@flush
+Lệnh mới đến khi câu cũ đang đọc? QUEUE_FLUSH dừng câu cũ và đọc câu mới ngay.
+~ Nếu lệnh mới đến khi câu cũ đang đọc, chế độ Queue Flush dừng câu cũ, và đọc câu mới ngay.
+
+@sum
+Câu nói nằm trong app: muốn đổi câu chỉ cần sửa GestureCommand, không phải nạp lại vòng tay.
+~ Câu nói nằm trong ứng dụng. Muốn đổi câu, chỉ cần sửa Gesture Command, không phải nạp lại vòng tay.

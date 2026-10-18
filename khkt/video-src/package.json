@@ -1,0 +1,8 @@
+{
+  "name": "bandw-khkt-video-src",
+  "private": true,
+  "type": "module",
+  "description": "Nguồn dựng video thuyết minh (không triển khai). Chạy: node render.mjs all",
+  "scripts": { "render": "node render.mjs all" },
+  "dependencies": { "playwright-core": "1.64.1" }
+}

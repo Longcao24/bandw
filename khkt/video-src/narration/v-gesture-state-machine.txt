@@ -1,0 +1,75 @@
+# title: Máy trạng thái nhận dạng cử chỉ
+
+@intro
+Máy trạng thái nhận dạng cử chỉ.
+
+@model | Trung tính → sẵn sàng
+Đây là mô hình đơn giản hoá với 5 trạng thái. Vòng tay luôn ở đúng một trạng thái.
+~ Đây là mô hình đơn giản hoá với năm trạng thái. Vòng tay luôn ở đúng một trạng thái.
+
+@neutral
+Đầu tiên là chờ trung tính: góc nghiêng và góc gập dưới 12°, tay gần như không xoay, yên đủ 200 ms.
+~ Đầu tiên là chờ trung tính: góc nghiêng và góc gập dưới mười hai độ, tay gần như không xoay, yên đủ hai trăm mili giây.
+
+@armed
+Đủ điều kiện, vòng tay chuyển sang trạng thái sẵn sàng.
+
+@candidate | Giữ & phát
+Người dùng nghiêng trái quá 22°. Vòng tay chuyển sang đang giữ và bắt đầu bấm giờ.
+~ Người dùng nghiêng trái quá hai mươi hai độ. Vòng tay chuyển sang đang giữ, và bắt đầu bấm giờ.
+
+@emit
+Giữ đủ 250 ms, vòng tay phát lệnh WATER.
+~ Giữ đủ hai trăm năm mươi mili giây, vòng tay phát lệnh WATER.
+
+@cooldown | Nghỉ
+Sau khi phát, vòng tay nghỉ 650 ms.
+~ Sau khi phát, vòng tay nghỉ sáu trăm năm mươi mili giây.
+
+@norepeat
+Tay vẫn giữ nghiêng nhưng lệnh không lặp lại. Phải về trung tính thì mới sẵn sàng lần nữa.
+~ Tay vẫn giữ nghiêng, nhưng lệnh không lặp lại. Phải về trung tính, thì mới sẵn sàng lần nữa.
+
+@flick
+Còn nếu thả tay trước khi đủ 250 ms, đồng hồ bị huỷ và không có lệnh nào được gửi.
+~ Còn nếu thả tay trước khi đủ hai trăm năm mươi mili giây, đồng hồ bị huỷ, và không có lệnh nào được gửi.
+
+@shake | Lắc 3 pha
+Lắc dùng con quay: tốc độ xoay vượt 100 °/s trong 2 mẫu liên tiếp thì tính là một pha.
+~ Cử chỉ lắc dùng con quay. Tốc độ xoay vượt một trăm độ trên giây trong hai mẫu liên tiếp, thì tính là một pha.
+
+@shake2
+3 pha đổi chiều trong 900 ms thì phát lệnh NO.
+~ Ba pha đổi chiều liên tục trong chín trăm mili giây, thì phát lệnh NO.
+
+@tap | Gõ 2 lần
+Gõ 2 lần do chính chip IMU phát hiện và bật cờ báo.
+~ Cú gõ hai lần do chính chip I M U phát hiện, và bật cờ báo.
+
+@tap2
+Cờ chỉ được tin khi tay đang yên, 300 ms trước tay không cử động. Chờ thêm 150 ms xác nhận, rồi phát YES.
+~ Cờ chỉ được tin khi tay yên, ba trăm mili giây trước đó không cử động. Chờ thêm một trăm năm mươi mili giây xác nhận, rồi phát YES.
+
+@tap3
+Tay vừa xoay nhanh hơn 50 °/s, như khi đặt tay xuống bàn? Cờ gõ bị bỏ qua.
+~ Tay vừa xoay nhanh, như khi đặt tay xuống bàn, thì cờ gõ bị bỏ qua.
+
+@help | Nhấp cẳng tay
+Hạ cẳng tay quá 25° rồi đưa về dưới 12° trong 700 ms: đó là một lần nhấp.
+~ Hạ cẳng tay quá hai mươi lăm độ, rồi về dưới mười hai độ trong bảy trăm mili giây: đó là một lần nhấp.
+
+@help2
+Nhấp lần hai cùng chiều trong 2 giây, vòng tay phát HELP. Giữ yên một tư thế thì không.
+~ Nhấp lần hai cùng chiều trong hai giây, vòng tay phát HELP. Giữ yên một tư thế thì không ra HELP.
+
+@helpwhy
+Bản cũ dùng gập rồi giữ, nên báo nhầm khi đưa tay lên uống nước hay đặt tay lên đùi.
+~ Bản cũ dùng gập tay rồi giữ, nên báo nhầm khi uống nước, hay đặt tay lên đùi.
+
+@helpwhy2
+Hai lần nhấp nhanh thì sinh hoạt thường ngày khó vô tình tạo ra.
+~ Hai lần nhấp nhanh, thì sinh hoạt thường ngày khó vô tình tạo ra.
+
+@sum
+Ngưỡng, thời gian giữ và thời gian nghỉ giúp vòng tay không phát nhầm, không phát lặp.
+~ Ngưỡng, thời gian giữ và thời gian nghỉ giúp vòng tay không phát nhầm, không phát lặp.

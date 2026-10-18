@@ -1,0 +1,43 @@
+# title: Thí nghiệm và ma trận nhầm lẫn
+
+@intro
+Thí nghiệm và ma trận nhầm lẫn.
+
+@why | Kịch bản thử
+Kiểm thử trên máy tính cho thấy thuật toán chạy đúng luật, nhưng chưa nói được độ chính xác trên tay người thật.
+
+@protocol
+Hiệu chuẩn xong, mỗi người làm mỗi cử chỉ 20 lần, theo thứ tự được xáo trộn.
+~ Hiệu chuẩn xong, mỗi người làm mỗi cử chỉ hai mươi lần, theo thứ tự được xáo trộn.
+
+@record
+Mỗi lần thử ghi lại: cử chỉ định làm, lệnh app nhận được, thời điểm và ghi chú.
+~ Mỗi lần thử, ghi lại: cử chỉ định làm, lệnh ứng dụng nhận được, thời điểm, và ghi chú.
+
+@idle
+Thêm một phiên sinh hoạt bình thường, không làm cử chỉ, để đếm lệnh phát nhầm.
+
+@matrix | Đếm kết quả
+Kết quả xếp vào ma trận nhầm lẫn: hàng là cử chỉ đã làm, cột là lệnh nhận được.
+~ Kết quả được xếp vào ma trận nhầm lẫn. Hàng là cử chỉ đã làm, cột là lệnh nhận được.
+
+@fill
+Mỗi lần thử rơi vào một ô. Số trong video chỉ là số liệu minh hoạ, không phải kết quả thật.
+~ Mỗi lần thử rơi vào một ô. Các số trong video này chỉ là số liệu minh hoạ, không phải kết quả thật.
+
+@diag | Đọc ma trận
+Đường chéo là những lần nhận đúng. Ô ngoài đường chéo là nhầm lẫn.
+
+@acc
+Độ chính xác = số lần đúng ÷ số lần thử. Ví dụ 18 trên 20 là 90%.
+~ Độ chính xác bằng số lần đúng chia cho số lần thử. Ví dụ mười tám trên hai mươi là chín mươi phần trăm.
+
+@offdiag
+Ở đây HELP hay không được nhận: có thể người thử nhấp chậm quá 700 ms, cần hướng dẫn lại hoặc chỉnh ngưỡng.
+~ Ở đây, HELP hay không được nhận. Có thể người thử nhấp chậm quá bảy trăm mili giây, nên cần hướng dẫn lại, hoặc chỉnh ngưỡng.
+
+@limits | Hạn chế
+Hãy ghi rõ điều kiện đo, số người thử, và báo cáo cả những lần thất bại.
+
+@honest
+Khi giám khảo hỏi độ chính xác, em chỉ đưa ra số đo thật của nhóm, kèm cách đo.

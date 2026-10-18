@@ -1,0 +1,60 @@
+WEBVTT
+Kind: subtitles
+Language: vi
+
+1
+00:00:01.000 --> 00:00:03.488
+Ứng dụng nhận lệnh và đọc thành tiếng.
+
+2
+00:00:03.688 --> 00:00:08.200
+Điện thoại nhận 5 byte và đổi chúng thành
+chuỗi chữ "WATER".
+
+3
+00:00:08.400 --> 00:00:14.423
+Hàm parse() bỏ khoảng trắng, đổi sang chữ
+in hoa, rồi tìm trong danh sách 5 lệnh.
+
+4
+00:00:14.623 --> 00:00:20.634
+Mỗi lệnh trong GestureCommand mang sẵn câu
+nói, nhãn cử chỉ và màu thẻ.
+
+5
+00:00:20.834 --> 00:00:27.990
+Nếu nhận chuỗi lạ như "HELLO", parse() trả
+về null và app bỏ qua, không đọc gì.
+
+6
+00:00:28.190 --> 00:00:31.189
+App hiện câu "Tôi muốn uống nước." bằng
+
+7
+00:00:31.189 --> 00:00:34.707
+chữ lớn và thêm vào lịch sử 5 lệnh gần
+nhất.
+
+8
+00:00:34.907 --> 00:00:41.011
+Rồi TextToSpeech đọc câu bằng giọng tiếng
+Việt, tốc độ 0,9 cho dễ nghe.
+
+9
+00:00:41.211 --> 00:00:44.032
+Lệnh mới đến khi câu cũ đang đọc?
+
+10
+00:00:44.032 --> 00:00:47.810
+QUEUE_FLUSH dừng câu cũ và đọc câu mới
+ngay.
+
+11
+00:00:48.010 --> 00:00:52.962
+Câu nói nằm trong app: muốn đổi câu chỉ
+cần sửa GestureCommand,
+
+12
+00:00:52.962 --> 00:00:55.673
+không phải nạp lại vòng tay.
+
