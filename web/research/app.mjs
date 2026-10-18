@@ -1,5 +1,5 @@
 const $=id=>document.getElementById(id);
-const names={WATER:'Tôi muốn uống nước.',FOOD:'Tôi muốn ăn.',NO:'Không.'};
+const names={WATER:'Tôi muốn uống nước.',FOOD:'Tôi muốn ăn.',NO:'Không.',YES:'Có.',HELP:'Tôi cần giúp đỡ.'};
 const tabs=['overview','firmware','analysis','demo','experiment'];
 function route(){const key=location.hash.slice(1);const tab=tabs.includes(key)?key:'overview';for(const id of tabs)$(id).hidden=id!==tab;document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-current',String(b.dataset.tab===tab)));if(tab==='analysis')draw();if(tab!=='demo')window.speechSynthesis?.cancel();}
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{location.hash=b.dataset.tab;});window.addEventListener('hashchange',route);

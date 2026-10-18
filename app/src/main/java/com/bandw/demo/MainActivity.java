@@ -6,11 +6,15 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.media.AudioAttributes;
+import android.media.AudioFocusRequest;
+import android.media.AudioManager;
 import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -30,16 +34,22 @@ public class MainActivity extends Activity {
     private LinearLayout demoPanel, devicePanel;
     private boolean demoMode;
     private GestureCommand current;
-    private boolean speechReady, destroyed, autoSpeak = true;
+    private boolean speechReady, destroyed, bandConnected, autoSpeak = true;
     private BandBleClient ble;
     private TextView connectionStatus, calibrationStatus;
     private Button calibrate;
     private int speechGeneration;
     private String activeUtterance;
+    private AudioManager audio;
+    private final AudioAttributes speechAudio = new AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build();
+    private AudioFocusRequest focus;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
-        setVolumeControlStream(android.media.AudioManager.STREAM_MUSIC);
+        setVolumeControlStream(AudioManager.STREAM_MUSIC); // Matches USAGE_MEDIA used for speech.
+        audio = getSystemService(AudioManager.class);
+        focus = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).setAudioAttributes(speechAudio).build();
         autoSpeak = getPreferences(MODE_PRIVATE).getBoolean("autoSpeak", true);
         if (state != null) {
             demoMode = state.getBoolean("demoMode", false);
@@ -55,7 +65,19 @@ public class MainActivity extends Activity {
                 calibrate.setAlpha(enabled ? 1f : 0.45f);
                 calibrationStatus.setText(value);
             }
-            public void command(String value) { if (!demoMode) receiveCommand(value, "Vòng tay"); }
+            public void command(String value) {
+                if (!demoMode) { receiveCommand(value, "Vòng tay"); return; }
+                GestureCommand ignored = GestureCommand.parse(value);
+                if (ignored != null) commandView.setText("Demo mode · Bỏ qua " + ignored.label + " từ vòng tay");
+            }
+            public void link(boolean active, boolean connected) {
+                bandConnected = connected;
+                // Keep the screen on and the process in the foreground while the band is in use.
+                if (active) getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                BandLinkService.update(MainActivity.this, active, connected ? "Đã kết nối BandW-Sense" : "Đang kết nối lại vòng tay…");
+                if (current == null) applyMode();
+            }
         });
         initSpeech();
     }
@@ -111,7 +133,7 @@ public class MainActivity extends Activity {
         message.addView(caption);
         phraseView = text(current == null ? "Sẵn sàng\nlắng nghe." : current.phrase, 29, true);
         phraseView.setTextColor(Color.WHITE);
-        phraseView.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        phraseLiveRegion();
         add(message, phraseView, 16);
         commandView = text(current == null ? "Kết nối vòng tay để bắt đầu" : "Đã nhận: " + current.name(), 13, false);
         commandView.setTextColor(Color.parseColor("#E0EADD"));
@@ -153,6 +175,7 @@ public class MainActivity extends Activity {
             autoSpeak = enabled;
             getPreferences(MODE_PRIVATE).edit().putBoolean("autoSpeak", enabled).apply();
             if (!enabled) stopSpeech();
+            phraseLiveRegion();
         });
         add(settings, automatic, 8);
         add(settings, button("Cài đặt giọng đọc", "#FFFFFF", () -> {
@@ -171,6 +194,11 @@ public class MainActivity extends Activity {
         applyMode();
     }
 
+    /** With auto-speak on, TTS already reads the phrase; a live region would make TalkBack read it twice. */
+    private void phraseLiveRegion() {
+        phraseView.setAccessibilityLiveRegion(autoSpeak ? View.ACCESSIBILITY_LIVE_REGION_NONE : View.ACCESSIBILITY_LIVE_REGION_POLITE);
+    }
+
     private void toggleDemo() {
         stopSpeech();
         demoMode = !demoMode;
@@ -186,7 +214,8 @@ public class MainActivity extends Activity {
         devicePanel.setVisibility(demoMode ? View.GONE : View.VISIBLE);
         if (current == null) {
             phraseView.setText(demoMode ? "Bạn muốn nói\nđiều gì?" : "Sẵn sàng\nlắng nghe.");
-            commandView.setText(demoMode ? "Chọn một cử chỉ bên dưới" : "Thực hiện cử chỉ khi vòng tay đã kết nối");
+            commandView.setText(demoMode ? "Chọn một cử chỉ bên dưới"
+                    : bandConnected ? "Vòng tay đã kết nối · Hãy thực hiện cử chỉ" : "Thực hiện cử chỉ khi vòng tay đã kết nối");
         }
     }
 
@@ -225,9 +254,7 @@ public class MainActivity extends Activity {
                 speechStatus.setText("Chưa có giọng tiếng Việt. Mở Cài đặt giọng đọc, chọn hoặc tải tiếng Việt rồi bấm Kiểm tra lại.");
                 return;
             }
-            speech.setAudioAttributes(new android.media.AudioAttributes.Builder()
-                    .setUsage(android.media.AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY)
-                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH).build());
+            speech.setAudioAttributes(speechAudio);
             speech.setSpeechRate(0.9f);
             speech.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                 @Override public void onStart(String id) { updateVoice(id, "Đang đọc…", true); }
@@ -245,7 +272,7 @@ public class MainActivity extends Activity {
             if (destroyed || !id.equals(activeUtterance)) return;
             speechStatus.setText(status);
             stop.setEnabled(speaking);
-            if (!speaking) activeUtterance = null;
+            if (!speaking) { activeUtterance = null; releaseFocus(); }
         });
     }
 
@@ -254,8 +281,10 @@ public class MainActivity extends Activity {
         activeUtterance = "command-" + System.nanoTime();
         speechStatus.setText("Đang chuẩn bị đọc…");
         stop.setEnabled(true);
+        if (audio != null) audio.requestAudioFocus(focus);
         if (speech.speak(current.phrase, TextToSpeech.QUEUE_FLUSH, null, activeUtterance) == TextToSpeech.ERROR) {
             activeUtterance = null;
+            releaseFocus();
             stop.setEnabled(false);
             speechStatus.setText("Không phát được âm thanh. Hãy kiểm tra lại giọng đọc.");
         }
@@ -264,9 +293,12 @@ public class MainActivity extends Activity {
     private void stopSpeech() {
         activeUtterance = null;
         if (speech != null) speech.stop();
+        releaseFocus();
         if (stop != null) stop.setEnabled(false);
         if (speechReady) speechStatus.setText("Đã dừng đọc · Tiếng Việt");
     }
+
+    private void releaseFocus() { if (audio != null) audio.abandonAudioFocusRequest(focus); }
 
     private void renderHistory() {
         historyView.setText(history.isEmpty() ? "Chưa có lệnh nào. Hãy thử một cử chỉ." : String.join("\n\n", history));
@@ -281,13 +313,19 @@ public class MainActivity extends Activity {
         super.onRequestPermissionsResult(code, permissions, results);
         if (code == BandBleClient.PERMISSIONS && !destroyed) ble.permissionResult();
     }
-    @Override protected void onStop() {
-        stopSpeech();
-        if (ble != null) ble.disconnect("Chưa kết nối · Bấm Kết nối vòng tay để nhận cử chỉ");
-        super.onStop();
+    /** Screen-off, Home and Settings only stop the Activity: BLE and speech keep running (see BandLinkService). */
+    @Override protected void onRestart() {
+        super.onRestart();
+        if (!speechReady) initSpeech(); // e.g. back from installing a Vietnamese voice.
     }
+    /** Before Android 12, Back finishes the root Activity and would end the band link; keep it like Home instead. */
+    @SuppressWarnings("deprecation")
+    @Override public void onBackPressed() { moveTaskToBack(true); }
     @Override protected void onDestroy() {
         destroyed = true;
+        if (ble != null) ble.release();
+        BandLinkService.update(this, false, null);
+        releaseFocus();
         if (speech != null) { speech.stop(); speech.shutdown(); }
         super.onDestroy();
     }

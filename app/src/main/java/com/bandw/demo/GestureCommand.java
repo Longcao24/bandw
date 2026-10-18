@@ -6,7 +6,9 @@ import java.util.Locale;
 public enum GestureCommand {
     WATER("Tôi muốn uống nước.", "← Nghiêng tay trái", "#E4EFF9"),
     FOOD("Tôi muốn ăn.", "→ Nghiêng tay phải", "#F6EFCF"),
-    NO("Không.", "↔ Lắc cổ tay", "#FCEAE5");
+    NO("Không.", "↔ Lắc cổ tay", "#FCEAE5"),
+    YES("Có.", "✌ Gõ 2 lần", "#E3F2DF"),
+    HELP("Tôi cần giúp đỡ.", "↕ Hạ cẳng tay rồi nâng lại, 2 lần", "#F7C6C0");
 
     public final String phrase;
     public final String label;
