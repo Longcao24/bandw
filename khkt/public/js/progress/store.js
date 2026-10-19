@@ -1,5 +1,5 @@
 // Progress store: in-memory state + localStorage persistence + events + mastery calculation.
-import { emptyProgress, sanitizeProgress, mergeProgress, totalPoints, sanitizeExam } from '../core/merge.js';
+import { emptyProgress, sanitizeProgress, mergeProgress, totalPoints, sanitizeExam, sanitizeAi, AI_MAX } from '../core/merge.js';
 import { generate, normalize } from '../core/learnerCode.js';
 import { lessonKey } from '../core/ids.js';
 import { todayStr, yesterdayStr, debounce } from '../util.js';
@@ -115,6 +115,31 @@ export function createStore({ storage = makeStorage(), now = () => Date.now() } 
       touchStreak();
       emit('card');
       return first ? 5 : 0;
+    },
+
+    /**
+     * Saves one AI grading of a defense question (score 0–10, one decimal kept). Synced via progress.ai.
+     * Returns { best, last, n, improved } with scores back in 0–10, or null for a bad id/score.
+     */
+    recordGrade(id, score) {
+      const t = Math.round(Number(score) * 10);
+      if (!Number.isFinite(t)) return null;
+      const tenths = Math.max(0, Math.min(AI_MAX, t));
+      const clean = sanitizeAi(id, { b: tenths, l: tenths, n: 1, at: now() });
+      if (!clean) return null;
+      const prev = progress.ai[id];
+      progress.ai[id] = prev
+        ? { b: Math.max(prev.b || 0, tenths), l: tenths, n: Math.min(1000, (prev.n || 0) + 1), at: Math.max(prev.at || 0, clean.at) }
+        : clean;
+      touchStreak();
+      emit('grade');
+      const g = progress.ai[id];
+      return { best: g.b / 10, last: g.l / 10, n: g.n, improved: !prev || tenths > (prev.b || 0) };
+    },
+    /** { best, last, n, at } in 0–10 for one question, or null if never graded by AI. */
+    grade(id) {
+      const g = progress.ai && progress.ai[id];
+      return g ? { best: g.b / 10, last: g.l / 10, n: g.n, at: g.at } : null;
     },
 
     visitStep(unitId, lessonId, s) {

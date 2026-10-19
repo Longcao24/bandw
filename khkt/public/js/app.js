@@ -11,6 +11,7 @@ const ROUTES = {
   unit: () => import('./views/unit.js'),
   lesson: () => import('./views/lesson.js'),
   practice: () => import('./views/practice.js'),
+  question: () => import('./views/question.js'),
   profile: () => import('./views/profile.js'),
   videos: () => import('./views/videos.js'),
   glossary: () => import('./views/glossary.js'),

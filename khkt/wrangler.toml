@@ -6,3 +6,7 @@ compatibility_date = "2025-09-01"
 binding = "DB"
 database_name = "bandw-khkt-progress"
 database_id = "d6b7f85b-733c-428e-af05-427947bf3033"   # npx wrangler d1 create bandw-khkt-progress
+
+# Workers AI (chấm câu trả lời phản biện, functions/api/grade.js). Model: xem README "Chấm bằng AI".
+[ai]
+binding = "AI"

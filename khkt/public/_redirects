@@ -1,0 +1,4 @@
+# Real paths for single-page views (rewrite, URL stays the same). /api/* is handled by Functions (_routes.json).
+# Rewrite to "/" (not "/index.html"): Pages pretty-URLs would turn a rewrite to /index.html into a 308 → "/".
+/question   /   200
+/questions  /   200

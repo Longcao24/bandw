@@ -68,6 +68,7 @@ export function render(root, _params, { course, store }) {
 
   page.append(el('section.quick-links', { 'aria-label': 'Lối tắt' },
     quick('#/exam', '📝', 'Thi thử', 'Đề có giờ + phản biện thử'),
+    quick('#/question', '❓', 'Ngân hàng câu hỏi', 'Mọi câu phản biện + AI chấm'),
     quick('#/practice', '🎤', 'Luyện phản biện', 'Thẻ câu hỏi của giám khảo'),
     quick('#/videos', '🎬', 'Thư viện video', '8 video hoạt hình có thuyết minh'),
     quick('#/glossary', '📖', 'Thuật ngữ', 'Tra nhanh từ chuyên môn')));

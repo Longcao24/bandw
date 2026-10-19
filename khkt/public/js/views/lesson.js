@@ -7,7 +7,7 @@ import { prefersReducedMotion, announce } from '../a11y.js';
 import { blocks } from '../render/markdown.js';
 import * as notfound from './notfound.js';
 
-export function render(root, { unitId, lessonId }, ctx) {
+export function render(root, { unitId, lessonId, stepId = null }, ctx) {
   const { course, store } = ctx;
   const unit = findUnit(course, unitId);
   const lesson = findLesson(unit, lessonId);
@@ -18,6 +18,9 @@ export function render(root, { unitId, lessonId }, ctx) {
   const key = `${unit.id}.${lesson.id}`;
   const saved = store.progress.lessons[key];
   let index = saved && !saved.d ? Math.min(Math.max(0, saved.s || 0), N - 1) : 0;
+  // Deep link #/unit/u03/lesson/l2/q/<stepId> (from /question): open that step directly.
+  const linked = stepId ? steps.findIndex((s) => s && s.id === stepId) : -1;
+  if (linked >= 0) index = linked;
   let maxSeen = index;
   const segState = new Array(N).fill('');
   for (let i = 0; i < index; i++) segState[i] = 'done';

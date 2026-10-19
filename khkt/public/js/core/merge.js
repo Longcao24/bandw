@@ -1,8 +1,10 @@
 // Progress model v1: sanitize, merge (pure, commutative, idempotent) and derived points.
 // Shared by the browser and the Pages Function.
-import { isExerciseId, isLessonKey, VIDEO_RE, DAY_RE, UNIT_RE, LESSON_RE } from './ids.js';
+import { isExerciseId, isDefenseQuestionId, isLessonKey, VIDEO_RE, DAY_RE, UNIT_RE, LESSON_RE } from './ids.js';
 
-export const LIMITS = { ex: 2000, lessons: 300, cards: 500, videos: 50, exams: 30 };
+export const LIMITS = { ex: 2000, lessons: 300, cards: 500, videos: 50, exams: 30, ai: 400 };
+/** AI grading scores are stored in tenths: 0..100 ↔ 0,0..10,0 điểm. */
+export const AI_MAX = 100;
 /** Mock-exam attempt id (see exam/generate.js newAttemptId) and modes. */
 export const EXAM_ID_RE = /^e[0-9a-z]{8,16}$/;
 export const EXAM_MODES = ['full', 'quick', 'unit', 'defense'];
@@ -13,7 +15,7 @@ const MAX_TS = 1e13;
 const MAX_COUNT = 1000;
 
 export function emptyProgress() {
-  return { v: 1, updatedAt: 0, ex: {}, lessons: {}, cards: {}, videos: {}, streak: { cur: 0, best: 0, day: '' }, last: null, exams: {} };
+  return { v: 1, updatedAt: 0, ex: {}, lessons: {}, cards: {}, videos: {}, streak: { cur: 0, best: 0, day: '' }, last: null, exams: {}, ai: {} };
 }
 
 const isObj = (x) => x !== null && typeof x === 'object' && !Array.isArray(x);
@@ -48,9 +50,16 @@ export function sanitizeProgress(x) {
   if (isObj(x.cards)) {
     for (const [k, e] of Object.entries(x.cards)) {
       if (Object.keys(out.cards).length >= LIMITS.cards) break;
-      if (!isExerciseId(k) || !isObj(e)) continue;
+      if (!isDefenseQuestionId(k) || !isObj(e)) continue;
       if (e.r !== 'good' && e.r !== 'again') continue;
       out.cards[k] = { r: e.r, n: int(e.n, MAX_COUNT), at: int(e.at) };
+    }
+  }
+  if (isObj(x.ai)) {
+    for (const [k, e] of Object.entries(x.ai)) {
+      if (Object.keys(out.ai).length >= LIMITS.ai) break;
+      const v = sanitizeAi(k, e);
+      if (v) out.ai[k] = v;
     }
   }
   if (isObj(x.videos)) {
@@ -77,6 +86,18 @@ export function sanitizeProgress(x) {
     out.exams = capExams(list);
   }
   return out;
+}
+
+/**
+ * Best AI grade of one defense question: { b: best (tenths, 0..100), l: last (tenths), n: graded count, at: ms of
+ * the last grading }. ~50 bytes per question, so all 200 questions add ~10 KB to the synced JSON.
+ */
+export function sanitizeAi(k, e) {
+  if (!isDefenseQuestionId(k) || !isObj(e)) return null;
+  const n = int(e.n, MAX_COUNT);
+  if (!n) return null;
+  const b = int(e.b, AI_MAX);
+  return { b, l: Math.min(int(e.l, AI_MAX), AI_MAX), n, at: int(e.at) };
 }
 
 /**
@@ -147,6 +168,15 @@ export function mergeProgress(a, b) {
     if ((x.at || 0) !== (y.at || 0)) win = (x.at || 0) > (y.at || 0) ? x : y;
     else win = x.r === 'good' ? x : y;
     out.cards[k] = { r: win.r, n: Math.max(x.n || 0, y.n || 0), at: Math.max(x.at || 0, y.at || 0) };
+  }
+
+  const gA = a.ai || {}, gB = b.ai || {};
+  for (const k of new Set([...Object.keys(gA), ...Object.keys(gB)])) {
+    const x = gA[k], y = gB[k];
+    if (!x || !y) { out.ai[k] = { ...(x || y) }; continue; }
+    const xa = x.at || 0, ya = y.at || 0;
+    const l = xa !== ya ? (xa > ya ? x.l : y.l) : Math.max(x.l || 0, y.l || 0);
+    out.ai[k] = { b: Math.max(x.b || 0, y.b || 0), l: l || 0, n: Math.max(x.n || 0, y.n || 0), at: Math.max(xa, ya) };
   }
 
   for (const k of new Set([...Object.keys(a.videos || {}), ...Object.keys(b.videos || {})])) out.videos[k] = 1;
