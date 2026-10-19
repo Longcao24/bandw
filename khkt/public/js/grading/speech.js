@@ -3,6 +3,7 @@
 // in a small live preview. Audio is processed by the browser's speech service, never by our server.
 import { el } from '../util.js';
 import { announce } from '../a11y.js';
+import { iconSvg } from '../icons.js';
 
 export function speechSupported() {
   return typeof window !== 'undefined' && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
@@ -15,7 +16,7 @@ export function micButton(textarea, { onChange } = {}) {
   let rec = null;
   let on = false;
   const btn = el('button.btn.sm.gr-mic', { type: 'button', 'aria-pressed': 'false' },
-    el('span.gr-mic-i', { 'aria-hidden': 'true' }, '🎙️'), el('span.gr-mic-t', null, 'Đọc bằng giọng nói'));
+    el('span.gr-mic-i', { 'aria-hidden': 'true', html: iconSvg('mic', 18) }), el('span.gr-mic-t', null, 'Đọc bằng giọng nói'));
   const preview = el('span.gr-interim', { 'aria-hidden': 'true' });
   const wrap = el('span.gr-mic-wrap', null, btn, preview);
 

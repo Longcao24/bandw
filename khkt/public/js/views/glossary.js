@@ -14,7 +14,7 @@ export function allTerms(course) {
 export function render(root, _p, { course }) {
   const terms = allTerms(course);
   const page = el('div.page.narrow.glossary');
-  page.append(pageHeader('📖 Thuật ngữ', `${terms.length} thuật ngữ trong giáo trình, xếp theo bảng chữ cái.`));
+  page.append(pageHeader('Thuật ngữ', `${terms.length} thuật ngữ trong giáo trình, xếp theo bảng chữ cái.`));
   const search = el('input.search', { type: 'search', placeholder: 'Tìm thuật ngữ (tiếng Việt hoặc tiếng Anh)…', 'aria-label': 'Tìm thuật ngữ' });
   const list = el('dl.term-list');
   const count = el('p.ex-sub', { 'aria-live': 'polite' });
@@ -31,7 +31,7 @@ export function render(root, _p, { course }) {
       if (L !== letter) { letter = L; list.append(el('div.term-letter', { 'aria-hidden': 'true' }, L)); }
       list.append(el('div.term-item', { id: `term-${encodeURIComponent(t.term)}` },
         el('dt', null, t.term, t.en ? el('span.term-en', null, ` (${t.en})`) : null),
-        el('dd', null, t.def, el('a.term-unit', { href: `#/unit/${t.unit.id}` }, ` ${t.unit.icon} ${t.unit.title}`))));
+        el('dd', null, t.def, el('a.term-unit', { href: `#/unit/${t.unit.id}` }, t.unit.title))));
     }
     count.textContent = q ? `${shown} kết quả` : '';
     if (!shown) list.append(el('p', null, terms.length ? 'Không tìm thấy thuật ngữ phù hợp.' : 'Các chương đang được soạn, thuật ngữ sẽ xuất hiện ở đây.'));

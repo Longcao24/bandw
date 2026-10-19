@@ -4,6 +4,7 @@ import { inline, blocks } from '../render/markdown.js';
 import { diagramSvg } from '../render/diagram.js';
 import { mountSim } from '../render/sim-host.js';
 import { announce } from '../a11y.js';
+import { iconSvg } from '../icons.js';
 
 const LOADERS = {
   mcq: () => import('./mcq.js'), multi: () => import('./multi.js'), truefalse: () => import('./truefalse.js'),
@@ -82,7 +83,7 @@ export function createExercise(step, { store, reducedMotion = false, mode = 'les
   const listeners = new Set();
   const graded = step.type !== 'flashcard';
   const card = el('div.ex' + (exam ? '.ex-exam' : ''), { 'data-type': step.type, 'data-id': step.id });
-  card.append(el('div.ex-type', null, el('span.ex-type-dot', { 'aria-hidden': 'true' }), TYPE_LABEL[step.type] || 'Bài tập'));
+  card.append(el('div.ex-type', null, TYPE_LABEL[step.type] || 'Bài tập'));
   const visual = renderVisual(step.visual, cleanups);
   if (visual) card.append(visual);
   card.append(el('div.ex-prompt', { html: inline(step.prompt) }));
@@ -128,7 +129,7 @@ export function createExercise(step, { store, reducedMotion = false, mode = 'les
   function showExplanation() {
     if (!step.explanation) return;
     explainBox.hidden = false;
-    explainBox.innerHTML = `<div class="ex-explain-title">Giải thích</div>${blocks(step.explanation)}`;
+    explainBox.innerHTML = `<div class="ex-explain-title">${iconSvg('info', 16)}Giải thích</div>${blocks(step.explanation)}`;
   }
 
   return {
@@ -142,14 +143,14 @@ export function createExercise(step, { store, reducedMotion = false, mode = 'les
       if (correct) {
         const r = store ? store.recordAttempt(step.id, { correct: true, attempt: state.attempt, hintUsed: state.hintShown }) : { earned: 0, pts: 10 };
         state.phase = 'done'; state.correct = true; state.earned = r.pts;
-        state.feedback = { kind: 'success', title: '✓ Chính xác!', points: r.pts, earned: r.earned };
+        state.feedback = { kind: 'success', title: 'Chính xác!', points: r.pts, earned: r.earned };
         showExplanation();
         if (comp.onFinal) comp.onFinal(true);
       } else {
         if (store) store.recordAttempt(step.id, { correct: false, attempt: state.attempt });
         state.phase = 'wrong'; state.wrongCount += 1;
         state.canReveal = state.wrongCount >= 2;
-        state.feedback = { kind: 'error', title: '✗ Chưa đúng', text: 'Chưa đúng, thử lại nhé.' + (step.hint && !state.hintShown ? ' Em có thể bấm 💡 Gợi ý.' : '') };
+        state.feedback = { kind: 'error', title: 'Chưa đúng', text: 'Em xem lại rồi thử lần nữa nhé.' + (step.hint && !state.hintShown ? ' Có thể bấm Gợi ý ở thanh dưới.' : '') };
       }
       update();
     },
@@ -173,8 +174,8 @@ export function createExercise(step, { store, reducedMotion = false, mode = 'les
       if (!step.hint || state.hintShown) return;
       state.hintShown = true;
       hintBox.hidden = false;
-      hintBox.innerHTML = `<span aria-hidden="true">💡</span> <span>${inline(step.hint)}</span>`;
-      announce('Gợi ý: ' + hintBox.textContent);
+      hintBox.innerHTML = `<span class="ex-hint-i">${iconSvg('lightbulb', 18)}</span><span><strong>Gợi ý: </strong>${inline(step.hint)}</span>`;
+      announce(hintBox.textContent);
       update();
     },
     // ---- exam mode ----

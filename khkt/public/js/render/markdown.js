@@ -1,5 +1,6 @@
 // markdown-lite (spec §4.2). Escape everything first, then apply a tiny set of rules.
 import { escapeHtml } from '../util.js';
+import { iconSvg } from '../icons.js';
 
 let GLOSSARY = new Map(); // lowercased term → {term, en, def, unit}
 export function setGlossary(map) { GLOSSARY = map; }
@@ -59,9 +60,9 @@ export function blocks(src) {
     } else if (lines.every((l) => /^\s*\d+\.\s+/.test(l))) {
       out.push('<ol>' + lines.map((l) => `<li>${inline(l.replace(/^\s*\d+\.\s+/, ''))}</li>`).join('') + '</ol>');
     } else if (lines.every((l) => /^\s*>!/.test(l))) {
-      out.push(`<div class="callout warn" role="note"><span class="callout-icon" aria-hidden="true">⚠️</span><p>${inline(lines.map((l) => l.replace(/^\s*>!\s?/, '')).join(' '))}</p></div>`);
+      out.push(`<div class="callout warn" role="note"><span class="callout-icon" aria-hidden="true">${iconSvg('alert', 18)}</span><p>${inline(lines.map((l) => l.replace(/^\s*>!\s?/, '')).join(' '))}</p></div>`);
     } else if (lines.every((l) => /^\s*>/.test(l))) {
-      out.push(`<div class="callout info" role="note"><span class="callout-icon" aria-hidden="true">💡</span><p>${inline(lines.map((l) => l.replace(/^\s*>\s?/, '')).join(' '))}</p></div>`);
+      out.push(`<div class="callout info" role="note"><span class="callout-icon" aria-hidden="true">${iconSvg('lightbulb', 18)}</span><p>${inline(lines.map((l) => l.replace(/^\s*>\s?/, '')).join(' '))}</p></div>`);
     } else {
       out.push(`<p>${inline(lines.join(' '))}</p>`);
     }

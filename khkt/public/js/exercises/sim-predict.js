@@ -7,7 +7,7 @@ export function create(step, api) {
   const n = step.options.length;
   const order = step.shuffle === false ? [...Array(n).keys()] : shuffle([...Array(n).keys()], api.seed);
   const stage = el('div.sp-stage');
-  const overlay = el('div.sp-overlay', { hidden: true, role: 'status' }, el('strong', null, '⏸ Dừng lại! Em đoán xem…'));
+  const overlay = el('div.sp-overlay', { hidden: true, role: 'status' }, el('strong', null, 'Dừng lại! Em đoán xem…'));
   const list = choiceList(api.uid || `ex-${step.id}`, step.options, order, () => api.onChange());
   const question = el('div.sp-question', { hidden: true }, list.el);
   const startBtn = el('button.btn.primary.sp-start', { type: 'button' }, '▶ Xem');

@@ -31,7 +31,7 @@ export function codeBlock({ code, language = 'cpp', highlight = [], notes = [], 
         }
         pop.hidden = false;
         pop.textContent = nt.note;
-      } }, nt.lines[0] === nt.lines[1] ? `📝 Dòng ${nt.lines[0]}` : `📝 Dòng ${nt.lines[0]}–${nt.lines[1]}`)));
+      } }, nt.lines[0] === nt.lines[1] ? `Dòng ${nt.lines[0]}` : `Dòng ${nt.lines[0]}–${nt.lines[1]}`)));
     // Tapping a noted line opens its note too.
     codeEl.addEventListener('click', (e) => {
       const row = e.target.closest('.code-line.has-note');

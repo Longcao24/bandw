@@ -2,7 +2,7 @@
 import { choiceList } from './_frame.js';
 
 export function create(step, api) {
-  const list = choiceList(api.uid || `ex-${step.id}`, ['✔ Đúng', '✘ Sai'], [0, 1], () => api.onChange(), { cls: 'tf' });
+  const list = choiceList(api.uid || `ex-${step.id}`, ['Đúng', 'Sai'], [0, 1], () => api.onChange(), { cls: 'tf' });
   const answerIdx = step.answer ? 0 : 1;
   return {
     el: list.el,

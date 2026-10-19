@@ -1,6 +1,7 @@
 // Mounts a sim module (public/js/sims/<id>.js) inside a standard frame:
 // stage + controls toolbar (if meta.timeline) + aria-live caption. Graceful fallback on failure.
 import { el } from '../util.js';
+import { icon } from '../icons.js';
 import { loadSim } from '../sims/registry.js';
 import { prefersReducedMotion } from '../a11y.js';
 
@@ -37,7 +38,7 @@ export function mountSim(container, spec, opts = {}) {
   const setPlaying = (p) => {
     playing = !!p;
     if (ui.play) {
-      ui.play.textContent = playing ? '⏸ Tạm dừng' : '▶ Phát';
+      ui.play.replaceChildren(icon(playing ? 'pause' : 'play', 16), el('span', null, playing ? 'Tạm dừng' : 'Phát'));
       ui.play.setAttribute('aria-pressed', String(playing));
     }
   };
@@ -66,9 +67,9 @@ export function mountSim(container, spec, opts = {}) {
     ui.play = el('button.btn.sm.primary', { type: 'button', 'aria-pressed': 'false', onclick: () => {
       autoPaused = false;
       if (playing) { instance.pause(); setPlaying(false); } else { instance.play(); setPlaying(true); }
-    } }, '▶ Phát');
-    ui.step = el('button.btn.sm', { type: 'button', onclick: () => { autoPaused = false; instance.step(); setPlaying(false); } }, '⏭ Bước tiếp');
-    ui.reset = el('button.btn.sm', { type: 'button', onclick: () => { autoPaused = false; instance.reset(); setPlaying(false); } }, '↺ Phát lại');
+    } }, icon('play', 16), el('span', null, 'Phát'));
+    ui.step = el('button.btn.sm', { type: 'button', 'aria-label': 'Bước tiếp', title: 'Bước tiếp', onclick: () => { autoPaused = false; instance.step(); setPlaying(false); } }, icon('skip-forward', 16), el('span.sim-btn-lbl', null, 'Bước tiếp'));
+    ui.reset = el('button.btn.sm', { type: 'button', 'aria-label': 'Phát lại', title: 'Phát lại', onclick: () => { autoPaused = false; instance.reset(); setPlaying(false); } }, icon('rotate-ccw', 16));
     ui.speed = el('select.sim-speed', { 'aria-label': 'Tốc độ', onchange: (e) => {
       speed = Number(e.target.value) || 1; ctx.speed = speed;
       if (typeof instance.setSpeed === 'function') instance.setSpeed(speed);
@@ -89,7 +90,7 @@ export function mountSim(container, spec, opts = {}) {
   function fallback(err) {
     console.warn(`[sim ${spec.sim}]`, err);
     stage.replaceChildren(el('div.sim-fallback', { role: 'note' },
-      el('span', { 'aria-hidden': 'true' }, '🛠️'),
+      el('span', { 'aria-hidden': 'true' }, icon('wrench', 22)),
       el('p', null, el('strong', null, 'Mô phỏng đang được chuẩn bị. '), 'Em đọc chú thích bên dưới và tiếp tục bài nhé.')));
     frame.classList.add('is-fallback');
   }

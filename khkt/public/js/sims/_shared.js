@@ -2,6 +2,8 @@
 // reduced-motion handling, hotspot mode, code view, variable table, 3D arm model, speech.
 // No DOM access at module top level (tests import this file in node).
 
+import { iconSvg } from '../icons.js';
+
 export const NS = 'http://www.w3.org/2000/svg';
 export const hasDOM = () => typeof document !== 'undefined' && typeof window !== 'undefined';
 
@@ -10,6 +12,7 @@ function applyAttrs(node, attrs, isSvg) {
   for (const [k, v] of Object.entries(attrs || {})) {
     if (v == null || v === false) continue;
     if (k === 'text') node.textContent = v;
+    else if (k === 'html') node.innerHTML = v;
     else if (k === 'class') node.setAttribute('class', v);
     else if (k === 'style' && typeof v === 'object') Object.assign(node.style, v);
     else if (k.startsWith('on') && typeof v === 'function') node.addEventListener(k.slice(2), v);
@@ -243,9 +246,9 @@ export class Timeline {
 /** Standard toolbar: ▶ Phát / ⏸ Tạm dừng, ⏮ Lùi, ⏭ Bước tiếp, ↺ Phát lại, tốc độ, beat dots, scrubber. */
 export function controls(tl, f, { speeds = [0.5, 1, 1.5] } = {}) {
   const playBtn = h('button', { type: 'button', class: 'bw-btn bw-btn--play', 'aria-label': 'Phát' });
-  const backBtn = h('button', { type: 'button', class: 'bw-btn', 'aria-label': 'Bước trước', title: 'Bước trước' }, '⏮');
-  const stepBtn = h('button', { type: 'button', class: 'bw-btn', 'aria-label': 'Bước tiếp', title: 'Bước tiếp' }, '⏭', h('span', { class: 'bw-btn__lbl' }, ' Bước tiếp'));
-  const replayBtn = h('button', { type: 'button', class: 'bw-btn', 'aria-label': 'Phát lại', title: 'Phát lại' }, '↺');
+  const backBtn = h('button', { type: 'button', class: 'bw-btn', 'aria-label': 'Bước trước', title: 'Bước trước', html: iconSvg('skip-back', 18) });
+  const stepBtn = h('button', { type: 'button', class: 'bw-btn', 'aria-label': 'Bước tiếp', title: 'Bước tiếp', html: iconSvg('skip-forward', 18) }, h('span', { class: 'bw-btn__lbl' }, 'Bước tiếp'));
+  const replayBtn = h('button', { type: 'button', class: 'bw-btn', 'aria-label': 'Phát lại', title: 'Phát lại', html: iconSvg('rotate-ccw', 18) });
   const speedSel = h('select', { class: 'bw-speed', 'aria-label': 'Tốc độ' }, speeds.map((v) => h('option', { value: v, selected: v === tl.speed }, `${fmt(v, v % 1 ? 1 : 0)}×`)));
   const dots = h('div', { class: 'bw-dots', role: 'group', 'aria-label': 'Các bước' });
   const prog = h('div', { class: 'bw-prog' }, h('div', { class: 'bw-prog__fill' }));
@@ -268,8 +271,8 @@ export function controls(tl, f, { speeds = [0.5, 1, 1.5] } = {}) {
   };
   const sync = (type) => {
     if (type === 'rebuild') buildDots();
-    playBtn.textContent = tl.playing ? '⏸' : '▶';
-    playBtn.append(h('span', { class: 'bw-btn__lbl' }, tl.playing ? ' Tạm dừng' : (tl.T >= tl.total - 0.5 ? ' Xem lại' : ' Phát')));
+    playBtn.innerHTML = iconSvg(tl.playing ? 'pause' : 'play', 18);
+    playBtn.append(h('span', { class: 'bw-btn__lbl' }, tl.playing ? 'Tạm dừng' : (tl.T >= tl.total - 0.5 ? 'Xem lại' : 'Phát')));
     playBtn.setAttribute('aria-label', tl.playing ? 'Tạm dừng' : 'Phát');
     playBtn.setAttribute('aria-pressed', tl.playing ? 'true' : 'false');
     prog.firstChild.style.width = `${(tl.T / tl.total) * 100}%`;

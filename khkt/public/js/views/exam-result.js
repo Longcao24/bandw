@@ -10,6 +10,7 @@ import { unitBarsSvg, scoreRingSvg, level, GOAL } from '../exam/chart.js';
 import { examData, unitInfo, lessonInfo } from '../exam/data.js';
 import { modeName, modeHref } from './exam.js';
 import { prefersReducedMotion } from '../a11y.js';
+import { icon } from '../icons.js';
 
 export function render(root, { attemptId }, ctx) {
   const { course, store } = ctx;
@@ -52,15 +53,15 @@ export function render(root, { attemptId }, ctx) {
       el('div.exam-score-ring', null, svgNode(scoreRingSvg(pct))),
       el('div.exam-score-text', null,
         el('p.eyebrow', null, `${modeName(course, meta)} · ${fmtDate(at)}`),
-        el('h1#xr-h', { tabindex: '-1' }, `${ch.icon} ${ch.title}`),
+        el('h1#xr-h', { tabindex: '-1' }, ch.title),
         el('p.exam-score-big', null, isDefense ? `Em nói được ${s}/${n} ý chính` : `Em làm đúng ${s}/${n} câu`),
         el('p.lead', null, ch.text),
-        el('div.exam-score-pills', null,
-          el('span.pill', null, `⏱ ${fmtDuration(d)}${detail && detail.limitSec ? ` / ${Math.round(detail.limitSec / 60)} phút` : ''}`),
-          detail && detail.auto ? el('span.pill.again', null, '⏰ Nộp tự động khi hết giờ') : null,
-          detail && detail.flags && detail.flags.length ? el('span.pill', null, `🚩 ${detail.flags.length} câu đã đánh dấu`) : null)),
+        el('p.meta-line.exam-score-pills', null,
+          el('span', null, icon('clock', 16), `${fmtDuration(d)}${detail && detail.limitSec ? ` / ${Math.round(detail.limitSec / 60)} phút` : ''}`),
+          detail && detail.auto ? el('span', null, icon('hourglass', 16), 'Nộp tự động khi hết giờ') : null,
+          detail && detail.flags && detail.flags.length ? el('span', null, icon('flag', 16), `${detail.flags.length} câu đã đánh dấu`) : null)),
       el('div.complete-actions', null,
-        el('a.btn.primary.lg', { href: again }, '↺ Làm đề mới'),
+        el('a.btn.primary.lg', { href: again }, icon('rotate-ccw', 18), 'Làm đề mới'),
         el('a.btn.lg', { href: '#/exam' }, 'Về Thi thử')));
     page.replaceChildren(hero);
     hero.querySelector('h1').focus({ preventScroll: true });
@@ -96,26 +97,26 @@ export function render(root, { attemptId }, ctx) {
         const pctU = Math.round((r.c / r.t) * 100);
         const lessons = [...(missedByUnit.get(r.id) || new Map())].map(([lid, cnt]) => ({ info: lessonInfo(course, r.id, lid), cnt })).filter((x) => x.info);
         (wi < 3 ? list : more).append(el('article.exam-weak', { class: `xb-${level(pctU)}` },
-          el('div.exam-weak-head', null, el('span.exam-weak-icon', { 'aria-hidden': 'true' }, r.icon),
+          el('div.exam-weak-head', null,
             el('div', null, el('strong', null, `${unitInfo(course, r.id).label}: ${r.name}`), el('small', null, `${r.c}/${r.t} · ${pctU}%`))),
           lessons.length
-            ? el('ul.exam-weak-lessons', null, lessons.map((x) => el('li', null, el('a', { href: x.info.href }, `📖 ${x.info.title}`), el('span.tag', null, `${x.cnt} câu sai`))))
-            : el('p', null, el('a', { href: `#/unit/${r.id}` }, 'Ôn lại chương này →')),
-          el('a.btn.sm', { href: isDefense ? `#/practice/${r.id}` : `#/exam/unit/${r.id}` }, isDefense ? '🎤 Luyện thẻ chương này' : '📚 Làm 10 câu chương này')));
+            ? el('ul.exam-weak-lessons', null, lessons.map((x) => el('li', null, el('a', { href: x.info.href }, x.info.title), el('span.tag', null, `${x.cnt} câu sai`))))
+            : el('p', null, el('a', { href: `#/unit/${r.id}` }, 'Ôn lại chương này')),
+          el('a.btn.sm', { href: isDefense ? `#/practice/${r.id}` : `#/exam/unit/${r.id}` }, isDefense ? 'Luyện thẻ chương này' : 'Làm 10 câu chương này')));
       });
       page.append(el('section.exam-weak-sec', { 'aria-labelledby': 'xw-h' },
-        el('h2#xw-h', null, '🎯 Nên ôn tiếp'),
+        el('h2#xw-h', null, 'Nên ôn tiếp'),
         el('p.ex-sub', null, isDefense
           ? (weak.length > 3 ? 'Bắt đầu với 3 chương em nói được ít ý chính nhất. Luyện lại thẻ phản biện của chương đó.' : 'Các chương em nói được ít ý chính, dưới mục tiêu. Luyện lại thẻ phản biện của chương đó.')
           : (weak.length > 3 ? 'Bắt đầu với 3 chương yếu nhất, kèm bài học chứa câu em làm sai.' : 'Các chương dưới mục tiêu, kèm bài học chứa câu em làm sai.')), list,
         weak.length > 3 ? el('details.exam-weak-more', null, el('summary', null, `Các chương khác cần ôn (${weak.length - 3})`), more) : null));
     } else if (unitRows.length) {
-      page.append(el('section.exam-allgood', null, el('strong', null, '🎉 Mọi chương đều đạt mục tiêu!'), ' Thử ', el('a', { href: '#/exam/defense' }, 'Phản biện thử'), ' để luyện nói.'));
+      page.append(el('section.exam-allgood', null, el('strong', null, 'Mọi chương đều đạt mục tiêu!'), ' Thử ', el('a', { href: '#/exam/defense' }, 'Phản biện thử'), ' để luyện nói.'));
     }
 
     // ---- review ----
     if (!detail) {
-      page.append(el('p.exam-note', { role: 'note' }, 'ℹ️ Bài làm chi tiết chỉ lưu trên máy đã làm bài. Ở máy này em xem được điểm và điểm theo chương.'));
+      page.append(el('p.exam-note', { role: 'note' }, icon('info', 18), 'Bài làm chi tiết chỉ lưu trên máy đã làm bài. Ở máy này em xem được điểm và điểm theo chương.'));
       return;
     }
     if (isDefense) { page.append(defenseReview(detail, data)); return; }
@@ -137,8 +138,8 @@ export function render(root, { attemptId }, ctx) {
         el('span.rv-num', null, `Câu ${i + 1}`),
         el('span.rv-prompt', { html: inline(step.prompt) }),
         el('span.sr-only', null, right ? ', đúng' : ans === undefined ? ', chưa làm' : ', sai'),
-        flags.has(q.id) ? el('span.rv-flag', { title: 'Đã đánh dấu' }, '🚩') : null,
-        el('span.tag', null, `${ui.icon} ${ui.short}`));
+        flags.has(q.id) ? el('span.rv-flag', { title: 'Đã đánh dấu' }, icon('flag', 16), el('span.sr-only', null, ', đã đánh dấu')) : null,
+        el('span.tag', null, ui.short));
       const body = el('div.rv-body');
       det.append(sum, body);
       det.addEventListener('toggle', () => {
@@ -164,11 +165,11 @@ export function render(root, { attemptId }, ctx) {
             right ? null : el('button.btn.sm', { type: 'button', onclick: (e) => {
               const again = createExercise(step, { mode: 'exam', uid: `rvc${i}-${detail.id}`, reducedMotion: prefersReducedMotion() });
               again.showCorrect();
-              e.currentTarget.replaceWith(el('div.rv-correct-view', null, el('p.ex-sub', null, '✓ Đáp án đúng trên hình:'), again.el));
+              e.currentTarget.replaceWith(el('div.rv-correct-view', null, el('p.ex-sub', null, 'Đáp án đúng trên hình:'), again.el));
               open.get(i).push(again);
-            } }, '👁 Xem đáp án đúng trên hình'));
-          body.append(ans === undefined ? el('p.rv-skipped', null, '⚪ Em chưa trả lời câu này. Đây là đáp án đúng:') : null, ex.el, correctBox,
-            lesson ? el('p.rv-lesson', null, el('a', { href: lesson.href }, `📖 Ôn bài: ${lesson.title} →`)) : null);
+            } }, icon('eye', 16), 'Xem đáp án đúng trên hình'));
+          body.append(ans === undefined ? el('p.rv-skipped', null, 'Em chưa trả lời câu này. Đây là đáp án đúng:') : null, ex.el, correctBox,
+            lesson ? el('p.rv-lesson', null, el('a', { href: lesson.href }, `Ôn bài: ${lesson.title}`)) : null);
           open.set(i, [ex]);
         }
       });
@@ -203,7 +204,7 @@ export function render(root, { attemptId }, ctx) {
           r.t ? el('div.rv-notes', null, el('strong', null, 'Ghi chú của em: '), r.t) : null,
           el('div.fc-answer', null, el('div.fc-label', null, 'Câu trả lời mẫu'), el('div', { html: blocks(item.step.modelAnswer) })),
           el('ul.def-points.readonly', null, kp.map((k, j) => el('li', { class: ticks.has(j) ? 'on' : '' }, el('span', { 'aria-hidden': 'true' }, ticks.has(j) ? '✓ ' : '○ '), el('span', { html: inline(k) }), el('span.sr-only', null, ticks.has(j) ? ' (đã nói được)' : ' (chưa nói)')))),
-          item.lessonId ? el('p.rv-lesson', null, el('a', { href: lessonInfo(course, q.unitId, item.lessonId)?.href || `#/unit/${q.unitId}` }, '📖 Ôn bài liên quan →')) : null));
+          item.lessonId ? el('p.rv-lesson', null, el('a', { href: lessonInfo(course, q.unitId, item.lessonId)?.href || `#/unit/${q.unitId}` }, 'Ôn bài liên quan')) : null));
       list.append(el('li', null, det));
     });
     return el('section.exam-review-sec', { 'aria-labelledby': 'xv-h' }, el('h2#xv-h', null, 'Xem lại từng câu'), list);

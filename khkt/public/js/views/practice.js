@@ -3,6 +3,7 @@ import { el } from '../util.js';
 import { flashcardView } from '../exercises/flashcard.js';
 import { findUnit, unitIndex, pageHeader } from './_ui.js';
 import { announce } from '../a11y.js';
+import { icon } from '../icons.js';
 
 export const SESSION_SIZE = 10;
 
@@ -31,10 +32,10 @@ export function orderCards(items, cards) {
 export function render(root, { unitId }, { course, store }) {
   const unit = unitId ? findUnit(course, unitId) : null;
   const page = el('div.page.narrow.practice');
-  page.append(pageHeader('🎤 Luyện phản biện', unit ? `Câu hỏi giám khảo của Chương ${unitIndex(course, unit)}: ${unit.title}` : 'Tự trả lời thành tiếng, lật thẻ, rồi tự đánh giá. Thẻ "Cần ôn lại" sẽ quay lại trước.'));
+  page.append(pageHeader('Luyện phản biện', unit ? `Câu hỏi giám khảo của Chương ${unitIndex(course, unit)}: ${unit.title}` : 'Tự trả lời thành tiếng, lật thẻ, rồi tự đánh giá. Thẻ "Cần ôn lại" sẽ quay lại trước.'));
   const chips = el('div.chips', { role: 'navigation', 'aria-label': 'Lọc theo chương' },
     el('a.chip', { href: '#/practice', class: unit ? '' : 'active', 'aria-current': unit ? undefined : 'page' }, 'Tất cả'),
-    course.units.map((u, i) => el('a.chip', { href: `#/practice/${u.id}`, class: unit === u ? 'active' : '', 'aria-current': unit === u ? 'page' : undefined }, `${u.icon} Ch. ${i + 1}`)));
+    course.units.map((u, i) => el('a.chip', { href: `#/practice/${u.id}`, class: unit === u ? 'active' : '', 'aria-current': unit === u ? 'page' : undefined }, `Ch. ${i + 1}`)));
   page.append(chips);
   const all = collectCards(course, unit ? unit.id : null);
   const area = el('div.practice-area');
@@ -51,9 +52,8 @@ export function render(root, { unitId }, { course, store }) {
     return { good, again, fresh: all.length - good - again };
   };
   const c0 = counts();
-  page.insertBefore(el('div.practice-stats', null,
-    el('span.pill.good', null, `👍 ${c0.good} tốt`), el('span.pill.again', null, `🔁 ${c0.again} cần ôn`), el('span.pill', null, `🆕 ${c0.fresh} chưa luyện`),
-    el('span.pill', null, `Tổng ${all.length} thẻ`)), area);
+  page.insertBefore(el('p.meta-line.practice-stats', null,
+    el('span', null, `${all.length} thẻ`), el('span', null, `${c0.good} trả lời tốt`), el('span', null, `${c0.again} cần ôn`), el('span', null, `${c0.fresh} chưa luyện`)), area);
 
   let session = orderCards(all, store.progress.cards).slice(0, SESSION_SIZE);
   let i = 0;
@@ -62,7 +62,7 @@ export function render(root, { unitId }, { course, store }) {
   function showCard() {
     const { card, unit: u, lesson } = session[i];
     let rated = null;
-    const nextBtn = el('button.btn.primary.lg', { type: 'button', disabled: true }, i === session.length - 1 ? 'Xem tổng kết' : 'Câu tiếp →');
+    const nextBtn = el('button.btn.primary.lg', { type: 'button', disabled: true }, i === session.length - 1 ? 'Xem tổng kết' : 'Câu tiếp');
     const view = flashcardView(card, {
       showPrompt: true, previous: store.progress.cards[card.id],
       onRate: (r) => {
@@ -76,7 +76,7 @@ export function render(root, { unitId }, { course, store }) {
     nextBtn.addEventListener('click', () => { i++; if (i < session.length) showCard(); else summary(); });
     area.replaceChildren(el('div.practice-card', null,
       el('div.practice-meta', null, el('span', null, `Thẻ ${i + 1}/${session.length}`),
-        el('span.tag', null, `${u.icon} ${u.title}${lesson ? ' · ' + lesson.title : ''}`)),
+        el('span.practice-src', null, `${u.title}${lesson ? ' · ' + lesson.title : ''}`)),
       el('div.practice-progress', { role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': session.length, 'aria-valuenow': i },
         el('div', { style: { width: `${(i / session.length) * 100}%` } })),
       view.el, el('div.practice-next', null, nextBtn)));
@@ -85,12 +85,12 @@ export function render(root, { unitId }, { course, store }) {
   }
   function summary() {
     area.replaceChildren(el('section.complete', null,
-      el('div.complete-badge', { 'aria-hidden': 'true' }, '🎤'),
+      el('div.complete-badge', { 'aria-hidden': 'true' }, icon('mic', 28)),
       el('h2', { tabindex: '-1' }, 'Xong phiên luyện!'),
-      el('p.lead', null, `👍 ${tally.good} thẻ trả lời tốt · 🔁 ${tally.again} thẻ cần ôn lại`),
+      el('p.lead', null, `${tally.good} thẻ trả lời tốt · ${tally.again} thẻ cần ôn lại`),
       el('p', null, tally.again ? 'Các thẻ cần ôn sẽ xuất hiện đầu tiên ở phiên sau.' : 'Tuyệt vời! Em hãy thử luyện với bạn trong vai giám khảo.'),
       el('div.complete-actions', null,
-        el('button.btn.primary.lg', { type: 'button', onclick: () => { session = orderCards(all, store.progress.cards).slice(0, SESSION_SIZE); i = 0; tally.good = tally.again = 0; showCard(); } }, '↺ Phiên mới'),
+        el('button.btn.primary.lg', { type: 'button', onclick: () => { session = orderCards(all, store.progress.cards).slice(0, SESSION_SIZE); i = 0; tally.good = tally.again = 0; showCard(); } }, icon('rotate-ccw', 18), 'Phiên mới'),
         el('a.btn.lg', { href: '#/' }, 'Về trang chủ'))));
     area.querySelector('h2').focus();
     announce('Xong phiên luyện');

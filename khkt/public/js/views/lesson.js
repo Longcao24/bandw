@@ -1,7 +1,12 @@
-// Lesson player: one step card at a time, segmented progress, sticky action bar, feedback, completion.
+// Lesson player: one step card at a time, thin segmented progress, step label, inline feedback, sticky action bar,
+// completion screen.
+const KIND_LABEL = { text: 'Bài đọc', code: 'Mã nguồn', diagram: 'Sơ đồ', video: 'Video', sim: 'Mô phỏng' };
+const KIND_ICON = { text: 'book-open', code: 'list', diagram: 'layers', video: 'video', sim: 'play', flashcard: 'mic' };
 import { el } from '../util.js';
 import { renderStep } from '../render/steps.js';
-import { findUnit, findLesson, unitColorVar, unitIndex } from './_ui.js';
+import { findUnit, findLesson, unitIndex } from './_ui.js';
+import { icon } from '../icons.js';
+import { TYPE_LABEL } from '../exercises/_frame.js';
 import { GRADED } from '../progress/store.js';
 import { prefersReducedMotion, announce } from '../a11y.js';
 import { blocks } from '../render/markdown.js';
@@ -29,21 +34,21 @@ export function render(root, { unitId, lessonId, stepId = null }, ctx) {
   let sessionPoints = 0;
   let finished = false;
 
-  const page = el('div.page.lesson', { style: { '--unit': unitColorVar(unit) } });
-  const exit = el('a.icon-btn.lesson-exit', { href: `#/unit/${unit.id}`, 'aria-label': 'Thoát bài học' }, '✕');
-  const back = el('button.btn.sm.ghost.lesson-back', { type: 'button', onclick: () => go(index - 1) }, '← Bước trước');
+  const page = el('div.page.lesson');
+  const exit = el('a.icon-btn.lesson-exit', { href: `#/unit/${unit.id}`, 'aria-label': 'Thoát bài học', title: 'Thoát bài học' }, icon('x', 20));
+  const back = el('button.btn.ghost.lesson-back', { type: 'button', 'aria-label': 'Bước trước', onclick: () => go(index - 1) }, icon('arrow-left', 18), el('span.lbl', null, 'Bước trước'));
   const segs = el('div.segments', { role: 'list', 'aria-label': 'Các bước của bài' });
   const counter = el('span.step-counter', { 'aria-live': 'polite' });
   const top = el('div.lesson-top', null, exit, segs, counter);
   const titleRow = el('div.lesson-title-row', null,
-    el('p.eyebrow', null, `${unit.icon} Chương ${unitIndex(course, unit)} · ${unit.title}`),
+    el('p.eyebrow', null, el('a', { href: `#/unit/${unit.id}`, title: unit.title }, `Chương ${unitIndex(course, unit)}`)),
     el('h1.lesson-h1', { tabindex: '-1' }, lesson.title),
-    lesson.goal && index === 0 ? el('p.lesson-goal-banner', null, '🎯 ', lesson.goal) : null);
+    lesson.goal && index === 0 ? el('p.lesson-goal-banner', null, icon('target', 18), el('span', null, el('strong', null, 'Mục tiêu: '), lesson.goal)) : null);
   const stage = el('div.step-stage');
   const feedback = el('div.feedback', { role: 'status', 'aria-live': 'polite', hidden: true });
-  const hintBtn = el('button.btn.ghost', { type: 'button', hidden: true, onclick: () => current?.exercise?.showHint() }, '💡 Gợi ý');
+  const hintBtn = el('button.btn.ghost', { type: 'button', hidden: true, 'aria-label': 'Gợi ý', onclick: () => current?.exercise?.showHint() }, icon('lightbulb', 18), el('span.lbl', null, 'Gợi ý'));
   const revealBtn = el('button.btn.ghost', { type: 'button', hidden: true, onclick: () => current?.exercise?.reveal() }, 'Xem đáp án');
-  const skipBtn = el('button.btn.ghost', { type: 'button', hidden: true, onclick: () => next() }, 'Bỏ qua →');
+  const skipBtn = el('button.btn.ghost', { type: 'button', hidden: true, onclick: () => next() }, 'Bỏ qua');
   const primary = el('button.btn.primary.lg.action-primary', { type: 'button' }, 'Tiếp tục');
   const bar = el('div.action-bar', null, el('div.action-inner', null, el('div.action-left', null, back, hintBtn), el('div.action-right', null, revealBtn, skipBtn, primary)));
   page.append(top, titleRow, stage, feedback, bar);
@@ -67,11 +72,16 @@ export function render(root, { unitId, lessonId, stepId = null }, ctx) {
     if (!fb) { feedback.hidden = true; feedback.className = 'feedback'; feedback.replaceChildren(); return; }
     feedback.hidden = false;
     feedback.className = `feedback ${fb.kind}${reduced ? '' : ' slide-up'}`;
-    const pts = fb.points ? el('span.fb-points', null, `+${fb.points} ⚡`) : null;
-    feedback.replaceChildren(el('div.fb-inner', null, el('strong.fb-title', null, fb.title), pts, fb.text ? el('p', null, fb.text) : null));
+    const pts = fb.points ? el('span.fb-points', null, icon('zap', 14), `+${fb.points} điểm`) : null;
+    const body = el('div.fb-body', null, fb.text ? el('p', null, fb.text) : null);
+    feedback.replaceChildren(el('div.fb-inner', null,
+      el('span.fb-icon', { 'aria-hidden': 'true' }, icon(fb.kind === 'success' ? 'check-circle' : fb.kind === 'error' ? 'x-circle' : 'info', 20)),
+      el('div.fb-head', null, el('strong.fb-title', null, fb.title), pts), body));
     if (fb.kind === 'success' && ex && ex.step.explanation && !ex.el.querySelector('.ex-explain:not([hidden])')) {
-      feedback.querySelector('.fb-inner').append(el('div', { html: blocks(ex.step.explanation) }));
+      body.append(el('div', { html: blocks(ex.step.explanation) }));
     }
+    if (!body.childNodes.length) body.remove();
+    requestAnimationFrame(() => { try { feedback.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' }); } catch { /* old browsers */ } });
   }
 
   function updateBar() {
@@ -80,7 +90,7 @@ export function render(root, { unitId, lessonId, stepId = null }, ctx) {
     back.disabled = index === 0;
     primary.disabled = false;
     if (!ex || !ex.state.graded) {
-      primary.textContent = index === N - 1 ? 'Hoàn thành ✓' : 'Tiếp tục';
+      primary.textContent = index === N - 1 ? 'Hoàn thành' : 'Tiếp tục';
       primary.onclick = () => next();
       if (ex) {
         // flashcard: rating is optional, but mark segment when rated.
@@ -102,14 +112,14 @@ export function render(root, { unitId, lessonId, stepId = null }, ctx) {
       primary.onclick = () => ex.retry();
       revealBtn.hidden = !st.canReveal;
       skipBtn.hidden = false;
-      skipBtn.textContent = 'Tiếp tục →';
+      skipBtn.textContent = 'Bỏ qua';
       setFeedback(st.feedback, ex);
     } else {
-      primary.textContent = index === N - 1 ? 'Hoàn thành ✓' : 'Tiếp tục';
+      primary.textContent = index === N - 1 ? 'Hoàn thành' : 'Tiếp tục';
       primary.onclick = () => next();
       setFeedback(st.feedback, ex);
     }
-    if (st.phase !== 'wrong') skipBtn.textContent = 'Bỏ qua →';
+    if (st.phase !== 'wrong') skipBtn.textContent = 'Bỏ qua';
   }
 
   function show(i, dir = 1) {
@@ -119,6 +129,8 @@ export function render(root, { unitId, lessonId, stepId = null }, ctx) {
     maxSeen = Math.max(maxSeen, i);
     const step = steps[i];
     current = renderStep(step, { store, reducedMotion: reduced });
+    const kind = KIND_LABEL[step.type] || TYPE_LABEL[step.type] || 'Bài tập';
+    current.el.prepend(el('p.step-label', null, icon(KIND_ICON[step.type] || 'pen', 16), `Bước ${i + 1}/${N}`, el('span', { 'aria-hidden': 'true' }, '·'), kind));
     if (!reduced) current.el.classList.add(dir >= 0 ? 'enter-right' : 'enter-left');
     stage.replaceChildren(current.el);
     const goal = titleRow.querySelector('.lesson-goal-banner');
@@ -172,16 +184,17 @@ export function render(root, { unitId, lessonId, stepId = null }, ctx) {
     bar.hidden = true; feedback.hidden = true;
     stage.replaceChildren(el('section.complete', { 'aria-labelledby': 'done-h' },
       reduced ? null : confetti(),
-      el('div.complete-badge', { 'aria-hidden': 'true' }, status === 'mastered' ? '★' : '✓'),
+      el('div.complete-badge', { 'aria-hidden': 'true' }, icon(status === 'mastered' ? 'trophy' : 'check', 30)),
       el('h2#done-h', { tabindex: '-1' }, 'Hoàn thành bài!'),
-      el('p.complete-points', null, el('span', { 'aria-hidden': 'true' }, '⚡ '), `+${sessionPoints} điểm năng lượng trong lần học này`, bonus ? ` (gồm ${bonus} điểm thưởng hoàn thành)` : ''),
+      el('p.complete-points', null, icon('zap', 18), `+${sessionPoints} điểm năng lượng`, bonus ? el('span.muted', null, ` (gồm ${bonus} điểm thưởng)`) : ''),
       el('p.complete-status', { class: `st-${status}` }, status === 'mastered'
-        ? '★ Thành thạo: em đã làm đúng mọi bài tập của bài này.'
-        : `◐ Đang học: còn ${missing} bài tập chưa đúng. Ôn lại để đạt "Thành thạo" nhé.`),
+        ? 'Thành thạo: em đã làm đúng mọi bài tập của bài này.'
+        : `Còn ${missing} bài tập chưa đúng. Ôn lại để đạt “Thành thạo” nhé.`),
       el('div.complete-actions', null,
-        nxt ? el('a.btn.primary.lg', { href: `#/unit/${nxt.u.id}/lesson/${nxt.l.id}` }, 'Bài tiếp theo →') : el('a.btn.primary.lg', { href: '#/practice' }, '🎤 Luyện phản biện'),
+        nxt ? el('a.btn.primary.lg', { href: `#/unit/${nxt.u.id}/lesson/${nxt.l.id}` }, 'Bài tiếp theo', icon('arrow-right', 18)) : el('a.btn.primary.lg', { href: '#/practice' }, icon('mic', 18), 'Luyện phản biện'),
         el('a.btn.lg', { href: `#/unit/${unit.id}` }, 'Về chương'),
-        status !== 'mastered' ? el('button.btn.lg.ghost', { type: 'button', onclick: () => { finished = false; bar.hidden = false; segState.fill(''); maxSeen = 0; show(0); } }, '↺ Học lại') : null)));
+        status !== 'mastered' ? el('button.btn.lg.ghost', { type: 'button', onclick: () => { finished = false; bar.hidden = false; segState.fill(''); maxSeen = 0; show(0); } }, icon('rotate-ccw', 18), 'Học lại') : null),
+      nxt ? el('p.complete-status', null, `Tiếp theo: ${nxt.l.title}`) : null));
     stage.querySelector('#done-h').focus();
     announce('Hoàn thành bài!');
   }

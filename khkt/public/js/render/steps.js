@@ -10,11 +10,9 @@ import { EXERCISE_TYPES } from '../progress/store.js';
 
 export const STEP_TYPES = ['text', 'code', 'diagram', 'video', 'sim', ...EXERCISE_TYPES];
 
-const KIND_ICON = { text: '📘', code: '💻', diagram: '🗺️', video: '🎬', sim: '🎞️' };
-
 export function renderStep(step, ctx = {}) {
   const card = el('article.step-card', { 'data-step-type': step.type });
-  const head = step.title ? el('h2.step-title', null, el('span.step-icon', { 'aria-hidden': 'true' }, KIND_ICON[step.type] || '✏️'), step.title) : null;
+  const head = step.title ? el('h2.step-title', null, step.title) : null;
   if (head) card.append(head);
 
   if (EXERCISE_TYPES.has(step.type)) {
@@ -39,7 +37,7 @@ export function renderStep(step, ctx = {}) {
       return { el: card, destroy: d.destroy };
     }
     case 'video': {
-      const v = renderVideo(step, ctx);
+      const v = renderVideo(step, { ...ctx, showTitle: !step.title });
       card.append(v.el);
       return { el: card, destroy: v.destroy };
     }

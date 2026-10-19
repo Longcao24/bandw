@@ -5,6 +5,7 @@ import { createSync } from './progress/sync.js';
 import { setMotionPref, applyTheme, toast } from './a11y.js';
 import { buildGlossary, setGlossary, lookupTerm } from './render/markdown.js';
 import { el, fmtNumber } from './util.js';
+import { icon } from './icons.js';
 
 const ROUTES = {
   home: () => import('./views/home.js'),
@@ -45,6 +46,33 @@ async function boot() {
   const pts = document.getElementById('hdr-points');
   const streak = document.getElementById('hdr-streak');
   const pill = document.getElementById('hdr-sync');
+  for (const i of document.querySelectorAll('i[data-icon]')) i.replaceWith(icon(i.dataset.icon, 18));
+
+  // ---- user menu (learner code + sync status + secondary links) ----
+  const menuBtn = document.querySelector('.user-menu-btn');
+  const menu = document.getElementById('user-menu');
+  const setMenu = (open, { focus = false } = {}) => {
+    menu.hidden = !open;
+    menuBtn.setAttribute('aria-expanded', String(open));
+    if (open) { codeEl.textContent = store.code; if (focus) menu.querySelector('a')?.focus(); }
+  };
+  menuBtn.addEventListener('click', () => setMenu(menu.hidden, { focus: false }));
+  menuBtn.addEventListener('keydown', (e) => { if (e.key === 'ArrowDown') { e.preventDefault(); setMenu(true, { focus: true }); } });
+  document.addEventListener('click', (e) => { if (!menu.hidden && !e.target.closest('.user-menu')) setMenu(false); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !menu.hidden) { setMenu(false); menuBtn.focus(); } });
+  menu.addEventListener('click', (e) => { if (e.target.closest('a')) setMenu(false); });
+
+  // ---- active nav + route flag (the tab bar hides on screens with their own bottom bar) ----
+  const NAV_OF = { home: 'learn', unit: 'learn', lesson: 'learn', practice: 'learn', videos: 'learn', glossary: 'learn', question: 'question', exam: 'exam', 'exam-run': 'exam', 'exam-defense': 'exam', 'exam-result': 'exam', profile: 'profile' };
+  document.addEventListener('bw:route', (e) => {
+    const name = e.detail.name;
+    document.body.dataset.route = name;
+    const nav = NAV_OF[name] || '';
+    for (const a of document.querySelectorAll('[data-nav]')) {
+      if (a.dataset.nav === nav) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    }
+    setMenu(false);
+  });
   let lastPoints = store.points;
   const paintHeader = () => {
     const p = store.points;
@@ -56,13 +84,18 @@ async function boot() {
     streak.querySelector('.v').textContent = String(s);
     streak.setAttribute('aria-label', `Chuỗi ${s} ngày học liên tiếp`);
   };
+  const dot = document.getElementById('hdr-sync-dot');
+  const codeEl = document.getElementById('hdr-code');
   const paintSync = () => {
+    const text = sync.label.replace(/^\S+\s/, ''); // drop the leading emoji of STATUS_LABEL
     pill.dataset.status = sync.status;
-    const [icon, ...rest] = sync.label.split(' ');
-    pill.querySelector('.i').textContent = icon;
-    pill.querySelector('.t').textContent = rest.join(' ');
-    pill.title = sync.label;
-    pill.setAttribute('aria-label', `Trạng thái lưu: ${rest.join(' ')}`);
+    dot.dataset.status = sync.status;
+    pill.querySelector('.i').dataset.status = sync.status;
+    pill.querySelector('.t').textContent = text;
+    pill.title = text;
+    pill.setAttribute('aria-label', `Trạng thái lưu: ${text}`);
+    menuBtn.setAttribute('aria-label', `Hồ sơ học tập · ${text}`);
+    menuBtn.title = text;
   };
   paintHeader(); paintSync();
   store.on(paintHeader);

@@ -13,6 +13,7 @@ import { confirmDialog, announce, prefersReducedMotion } from '../a11y.js';
 import { createGrader } from '../grading/panel.js';
 import { micButton } from '../grading/speech.js';
 import { fmtScore } from '../grading/api.js';
+import { icon } from '../icons.js';
 
 const JUDGES = ['Giám khảo 1', 'Giám khảo 2', 'Giám khảo 3'];
 const FOLLOW_SEC = 45;
@@ -41,19 +42,19 @@ export function render(root, _params, ctx) {
     const timeChips = [60, 90].map((s) => el('button.chip', { type: 'button', 'aria-pressed': String(s === secs), class: s === secs ? 'active' : '', onclick: () => {
       secs = s; timeChips.forEach((c, i) => { const on = [60, 90][i] === s; c.classList.toggle('active', on); c.setAttribute('aria-pressed', String(on)); });
     } }, `${s} giây/câu`));
-    const startBtn = el('button.btn.primary.lg', { type: 'button' }, '🎤 Vào phòng phản biện');
+    const startBtn = el('button.btn.primary.lg', { type: 'button' }, icon('mic', 18), 'Vào phòng phản biện');
     const card = el('section.exam-intro', { 'aria-labelledby': 'xd-h' },
       el('div.def-panel-art', { 'aria-hidden': 'true' }, svgNode(panelSvg(-1))),
       el('p.eyebrow', null, 'Thi thử'),
-      el('h1#xd-h', { tabindex: '-1' }, '🎤 Phản biện thử'),
+      el('h1#xd-h', { tabindex: '-1' }, 'Phản biện thử'),
       el('p.lead', null, `Hội đồng ảo hỏi ${MODES.defense.size} câu, trộn từ các chương và từ ngân hàng câu hỏi riêng của đề thi.`),
       el('ul.exam-rules', null,
-        rule('🗣️', 'Trả lời THÀNH TIẾNG như trước hội đồng thật. Có thể gõ vài ý ghi chú.'),
-        rule('⏳', 'Mỗi câu có đồng hồ đếm ngược. Hết giờ thì câu trả lời mẫu hiện ra.'),
-        rule('✅', 'Đọc câu trả lời mẫu rồi tự đánh dấu những ý chính em đã nói được: đó là điểm của em.'),
-        rule('🔥', 'Muốn khó hơn? Bấm "Giám khảo hỏi xoáy" để nhận thêm một câu hỏi bám đuổi.')),
+        rule('mic', 'Trả lời THÀNH TIẾNG như trước hội đồng thật. Có thể gõ vài ý ghi chú.'),
+        rule('clock', 'Mỗi câu có đồng hồ đếm ngược. Hết giờ thì câu trả lời mẫu hiện ra.'),
+        rule('list', 'Đọc câu trả lời mẫu rồi tự đánh dấu những ý chính em đã nói được: đó là điểm của em.'),
+        rule('flame', 'Muốn khó hơn? Bấm "Giám khảo hỏi xoáy" để nhận thêm một câu hỏi bám đuổi.')),
       el('div.def-time', { role: 'group', 'aria-label': 'Thời gian mỗi câu' }, el('span', null, 'Thời gian mỗi câu:'), timeChips),
-      other ? el('p.exam-conflict', { role: 'note' }, '⏳ Em đang có một bài làm dở (', el('a', { href: modeHref(other.mode, other.unitId) }, modeName(course, other)), '). Vào phòng phản biện sẽ bỏ bài đó.') : null,
+      other ? el('p.exam-conflict', { role: 'note' }, 'Em đang có một bài làm dở (', el('a', { href: modeHref(other.mode, other.unitId) }, modeName(course, other)), '). Vào phòng phản biện sẽ bỏ bài đó.') : null,
       el('div.complete-actions', null, startBtn, el('a.btn.lg', { href: '#/exam' }, 'Để sau')));
     page.replaceChildren(card);
     card.querySelector('h1').focus();
@@ -88,7 +89,7 @@ export function render(root, _params, ctx) {
 
       const head = el('div.def-head', null,
         el('span.exam-count', null, `Câu ${i + 1}/${N}`),
-        el('span.tag', null, `${ui.icon} ${ui.label}`),
+        el('span.tag', null, ui.label),
         el('div.practice-progress', { role: 'progressbar', 'aria-label': 'Tiến độ phản biện', 'aria-valuemin': 0, 'aria-valuemax': N, 'aria-valuenow': i },
           el('div', { style: { width: `${(i / N) * 100}%` } })));
       const panel = el('div.def-panel', { 'aria-hidden': 'true' }, svgNode(panelSvg(judge)));
@@ -105,10 +106,10 @@ export function render(root, _params, ctx) {
         const notes = el('textarea.text-input.def-notes', { rows: 3, maxlength: 1000, placeholder: 'Ghi nhanh vài ý (không bắt buộc)…', 'aria-label': 'Ghi chú câu trả lời' });
         notes.value = r.t || '';
         notes.addEventListener('input', () => { r.t = notes.value.slice(0, 1000); persist(); });
-        const done = el('button.btn.primary.lg', { type: 'button', onclick: () => toReview(false) }, '✋ Em trả lời xong');
+        const done = el('button.btn.primary.lg', { type: 'button', onclick: () => toReview(false) }, icon('check', 18), 'Em trả lời xong');
         micRef = micButton(notes);
         area.replaceChildren(el('div.def-answer', null, ring,
-          el('div.def-answer-side', null, el('p.def-say', null, '🗣️ Hãy trả lời thành tiếng: ý chính → dẫn chứng (số liệu, dòng code) → giới hạn.'), notes,
+          el('div.def-answer-side', null, el('p.def-say', null, icon('mic', 18), el('span', null, 'Hãy trả lời thành tiếng: ý chính → dẫn chứng (số liệu, dòng code) → giới hạn.')), notes,
             micRef ? el('div.def-mic', null, micRef.el, el('span.ex-sub', null, 'Bật micro để máy ghi lại lời em nói, rồi cho AI chấm ở bước sau.')) : null,
             el('div.def-actions', null, done))));
         const paintRing = () => {
@@ -149,7 +150,7 @@ export function render(root, _params, ctx) {
         // ---- optional AI grading of the typed / dictated answer ----
         const notesView = r.t ? el('div.rv-notes', null, el('strong', null, 'Ghi chú của em: '), r.t) : null;
         const aiBox = el('div.def-ai', { hidden: true });
-        const aiBtn = el('button.btn.def-ai-btn', { type: 'button', 'aria-expanded': 'false' }, el('span', { 'aria-hidden': 'true' }, '🤖 '),
+        const aiBtn = el('button.btn.def-ai-btn', { type: 'button', 'aria-expanded': 'false' }, icon('sparkles', 18),
           Number.isInteger(r.ai) ? `Chấm lại bằng AI (lần trước ${fmtScore(r.ai / 10)}/10)` : 'Chấm câu trả lời bằng AI (không bắt buộc)');
         aiBtn.addEventListener('click', () => {
           const open = aiBox.hidden;
@@ -175,7 +176,7 @@ export function render(root, _params, ctx) {
         });
         const fu = followUpFor(step, data.followUps, data.genericFollowUp);
         const fuBox = el('div.def-follow');
-        const fuBtn = fu ? el('button.btn.def-follow-btn', { type: 'button', onclick: () => followUp() }, '🔥 Giám khảo hỏi xoáy') : null;
+        const fuBtn = fu ? el('button.btn.def-follow-btn', { type: 'button', onclick: () => followUp() }, icon('flame', 18), 'Giám khảo hỏi xoáy') : null;
         function followUp() {
           r.f = 1; persist();
           let end = Date.now() + FOLLOW_SEC * 1000;
@@ -186,7 +187,7 @@ export function render(root, _params, ctx) {
           fuBox.replaceChildren(el('div.def-bubble.follow', null, el('div.def-who', null, `${JUDGES[(judge + 1) % 3]} hỏi thêm:`), el('p.def-fq', { html: inline(fu.prompt) })), t, showBtn, ans);
           fuBtn.remove();
           stopTimer();
-          const tick = () => { const left = Math.ceil((end - Date.now()) / 1000); t.textContent = `⏳ ${fmtClock(Math.max(0, left))}`; if (left <= 0) reveal(); };
+          const tick = () => { const left = Math.ceil((end - Date.now()) / 1000); t.textContent = fmtClock(Math.max(0, left)); if (left <= 0) reveal(); };
           tick(); timer = setInterval(tick, 1000);
           fuBox.querySelector('.def-fq').setAttribute('tabindex', '-1'); fuBox.querySelector('.def-fq').focus();
         }
@@ -196,15 +197,15 @@ export function render(root, _params, ctx) {
           if (last) { finish(); return; }
           a.cur += 1; a.phase = 'answer'; a.timeUp = false; a.qEnd = Date.now() + a.secs * 1000; persist();
           show(); window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
-        } }, last ? '🏁 Xem kết quả' : 'Câu tiếp →');
+        } }, last ? 'Xem kết quả' : 'Câu tiếp');
         area.replaceChildren(...[
-          a.timeUp ? el('p.def-timeup', { role: 'status' }, '⏰ Hết giờ! Ở phòng thi thật, giám khảo sẽ ngắt lời ở đây. Tập nói gọn hơn nhé.') : null,
+          a.timeUp ? el('p.def-timeup', { role: 'status' }, 'Hết giờ! Ở phòng thi thật, giám khảo sẽ ngắt lời ở đây. Tập nói gọn hơn nhé.') : null,
           notesView,
           aiBtn, aiBox,
           el('div.fc-answer', { tabindex: '-1' }, el('div.fc-label', null, 'Câu trả lời mẫu'), el('div', { html: blocks(step.modelAnswer) })),
           el('div.fc-label', null, 'Em đã nói được những ý nào? (tự đánh dấu, đây là điểm của em)'),
           checks, score,
-          step.explanation ? el('p.ex-sub', null, '💡 ', el('span', { html: inline(step.explanation) })) : null,
+          step.explanation ? el('p.ex-sub.fc-tip', null, icon('lightbulb', 16), el('span', { html: inline(step.explanation) })) : null,
           fuBtn, fuBox,
           el('div.def-actions', null, next)].filter(Boolean));
       }
@@ -235,8 +236,8 @@ export function render(root, _params, ctx) {
   return { title: 'Phản biện thử', destroy() { destroyed = true; stopTimer(); dropWidgets(); } };
 }
 
-function rule(icon, text) {
-  return el('li', null, el('span.exam-rule-icon', { 'aria-hidden': 'true' }, icon), el('span', null, text));
+function rule(ic, text) {
+  return el('li', null, el('span.exam-rule-icon', { 'aria-hidden': 'true' }, icon(ic, 18)), el('span', null, text));
 }
 
 /** Three judges behind a table; `speaking` (0–2) is highlighted, -1 = none. */

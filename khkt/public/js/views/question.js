@@ -6,6 +6,7 @@ import { inline, blocks } from '../render/markdown.js';
 import { announce } from '../a11y.js';
 import { createGrader, scoreBadge } from '../grading/panel.js';
 import { fmtScore } from '../grading/api.js';
+import { icon } from '../icons.js';
 
 const FILTER_KEY = 'bw.v1.qfilter';
 const STATUS_OPTS = [
@@ -48,36 +49,35 @@ export function render(root, params, { course, store }) {
     const f = { u: '', t: '', s: 'all', q: '', ...loadFilter() };
 
     // ---------- header ----------
-    const statsBox = el('div.q-stats');
+    const statsBox = el('p.meta-line.q-stats');
     const head = el('header.page-head.q-head', null,
-      el('p.eyebrow', null, '🎤 Ngân hàng phản biện'),
-      el('h1', { tabindex: '-1' }, `${fmtNumber(total)} câu hỏi phản biện`),
-      el('p.lead', null, 'Mọi câu giám khảo có thể hỏi, gom từ các bài học. Mở một câu, tự trả lời (gõ hoặc nói), rồi để AI chấm và chỉ ra ý còn thiếu.'),
+      el('h1', { tabindex: '-1' }, 'Câu hỏi phản biện'),
+      el('p.lead', null, `${fmtNumber(total)} câu giám khảo có thể hỏi. Mở một câu, tự trả lời (gõ hoặc nói), rồi để AI chấm và chỉ ra ý còn thiếu.`),
       statsBox);
 
     // ---------- controls ----------
-    const search = el('input.search.q-search', { type: 'search', id: 'q-search', placeholder: 'Tìm: “watchdog”, “nghieng”, “pin”…', autocomplete: 'off', enterkeyhint: 'search' });
+    const search = el('input.search.q-search', { type: 'search', id: 'q-search', placeholder: 'Tìm câu hỏi: “watchdog”, “nghieng”, “pin”…', autocomplete: 'off', enterkeyhint: 'search' });
     search.value = f.q || '';
-    const unitSel = el('select#q-unit', null, el('option', { value: '' }, 'Tất cả chương'),
+    const unitSel = el('select#q-unit', null, el('option', { value: '' }, 'Mọi chương'),
       course.units.map((u, i) => {
         const n = items.filter((it) => it.unitId === u.id).length;
         return n ? el('option', { value: u.id }, `Ch. ${i + 1}: ${u.title} (${n})`) : null;
       }));
     unitSel.value = f.u || '';
-    const topicSel = el('select#q-topic', null, el('option', { value: '' }, 'Tất cả chủ đề'),
-      idx.topics().map((t) => el('option', { value: t.id }, `${t.icon} ${t.label} (${t.count})`)));
+    const topicSel = el('select#q-topic', null, el('option', { value: '' }, 'Mọi chủ đề'),
+      idx.topics().map((t) => el('option', { value: t.id }, `${t.label} (${t.count})`)));
     topicSel.value = f.t || '';
     const statusSel = el('select#q-status', null, STATUS_OPTS.map(([v, l]) => el('option', { value: v }, l)));
     statusSel.value = f.s || 'all';
-    const randomBtn = el('button.btn.primary.q-random', { type: 'button' }, el('span', { 'aria-hidden': 'true' }, '🎲 '), 'Luyện ngẫu nhiên');
+    const randomBtn = el('button.btn.sm.q-random', { type: 'button' }, icon('shuffle', 16), 'Luyện ngẫu nhiên');
     const resetBtn = el('button.btn.ghost.sm.q-reset', { type: 'button' }, 'Xoá bộ lọc');
     const shown = el('p.q-shown', { role: 'status', 'aria-live': 'polite' });
     const controls = el('section.q-controls', { 'aria-label': 'Tìm và lọc câu hỏi' },
-      el('div.q-field.q-field-search', null, el('label', { for: 'q-search' }, 'Tìm kiếm (gõ có dấu hay không dấu đều được)'), search),
-      el('div.q-field', null, el('label', { for: 'q-unit' }, 'Chương'), unitSel),
-      el('div.q-field', null, el('label', { for: 'q-topic' }, 'Chủ đề'), topicSel),
-      el('div.q-field', null, el('label', { for: 'q-status' }, 'Trạng thái'), statusSel),
-      el('div.q-ctl-row', null, randomBtn, resetBtn, shown));
+      el('div.q-field.q-field-search', null, el('label.sr-only', { for: 'q-search' }, 'Tìm kiếm (gõ có dấu hay không dấu đều được)'), search),
+      el('div.q-field', null, el('label.sr-only', { for: 'q-unit' }, 'Chương'), unitSel),
+      el('div.q-field', null, el('label.sr-only', { for: 'q-topic' }, 'Chủ đề'), topicSel),
+      el('div.q-field', null, el('label.sr-only', { for: 'q-status' }, 'Trạng thái'), statusSel),
+      el('div.q-ctl-row', null, shown, resetBtn, randomBtn));
 
     // ---------- list ----------
     const list = el('ol.q-list', { 'aria-label': 'Danh sách câu hỏi phản biện' });
@@ -100,12 +100,9 @@ export function render(root, params, { course, store }) {
         el('span.q-num', { 'aria-hidden': 'true' }, String(it.n)),
         el('span.q-main', null,
           el('span.q-text', { html: inline(it.question) }),
-          el('span.q-meta', null,
-            el('span.q-chip', null, `${it.unitIcon} Ch. ${it.unitIndex || '?'}`),
-            el('span.q-chip.topic', null, `${it.topic.icon} ${it.tag || it.topic.label}`),
-            it.src === 'bank' ? el('span.q-chip.bank', null, '📝 Đề thi') : null)),
+          el('span.q-meta', null, [`Chương ${it.unitIndex || '?'}`, it.tag || it.topic.label, it.src === 'bank' ? 'Đề thi thử' : null].filter(Boolean).join(' · '))),
         statusEl,
-        el('span.q-chev', { 'aria-hidden': 'true' }, '▾'));
+        el('span.q-chev', { 'aria-hidden': 'true' }, icon('chevron-down', 18)));
       const body = el('div.q-body', { id: bodyId, hidden: true, role: 'region', 'aria-label': `Câu ${it.n}` });
       const li = el('li.q-item', { id: domId(it.id), dataset: { id: it.id } }, el('h2.q-h', null, toggle), body);
       let built = false;
@@ -113,44 +110,45 @@ export function render(root, params, { course, store }) {
       function paint() {
         const st = statusOf(store, it.id);
         li.dataset.status = st.key;
+        const again = st.card && st.card.r === 'again';
         statusEl.replaceChildren(st.key === 'ai' ? scoreBadge(st.best)
-          : st.key === 'done' ? el('span.q-st.done', null, st.card && st.card.r === 'again' ? '🔁 Cần ôn' : '◐ Đã luyện')
-            : el('span.q-st.new', null, '○ Chưa luyện'));
+          : st.key === 'done' ? el('span.q-st', { class: again ? 'again' : 'done', title: again ? 'Cần ôn' : 'Đã luyện' }, icon(again ? 'repeat' : 'circle-half', 18), el('span.sr-only', null, again ? 'Cần ôn' : 'Đã luyện'))
+            : el('span.q-st.new', { title: 'Chưa luyện' }, icon('circle', 18), el('span.sr-only', null, 'Chưa luyện')));
       }
       function buildBody() {
         built = true;
         const lessonLink = it.lessonId
-          ? el('a.btn.sm.q-lesson', { href: it.href }, el('span', { 'aria-hidden': 'true' }, '📖 '), it.embedded ? 'Đi tới bài học' : 'Ôn bài liên quan',
+          ? el('a.btn.sm.ghost.q-lesson', { href: it.href }, icon('book-open', 16), it.embedded ? 'Đi tới bài học' : 'Ôn bài liên quan',
             el('span.q-lesson-t', null, `: ${it.lessonTitle}`))
-          : el('a.btn.sm.q-lesson', { href: it.href }, '📖 Đi tới chương');
+          : el('a.btn.sm.ghost.q-lesson', { href: it.href }, icon('book-open', 16), 'Đi tới chương');
         const grader = createGrader(it, { store, onResult: () => { paint(); updateStats(); applyFilters(false); } });
         graders.set(it.id, grader);
         const modelId = domId(it.id) + '-model';
-        const showModel = el('button.btn.sm.q-show', { type: 'button', 'aria-expanded': 'false', 'aria-controls': modelId }, '👀 Xem câu trả lời mẫu');
+        const showModel = el('button.btn.sm.q-show', { type: 'button', 'aria-expanded': 'false', 'aria-controls': modelId }, icon('eye', 16), el('span', null, 'Xem câu trả lời mẫu'));
         const rated = el('p.fc-rated', { role: 'status', hidden: true });
         const rateBtn = (r, label) => el('button.btn.sm' + (r === 'good' ? '.success' : ''), { type: 'button', onclick: (e) => {
           const pts = store.rateCard(it.id, r);
           for (const b of e.currentTarget.parentNode.children) { b.classList.remove('chosen'); b.setAttribute('aria-pressed', 'false'); }
           e.currentTarget.classList.add('chosen'); e.currentTarget.setAttribute('aria-pressed', 'true');
-          rated.hidden = false; rated.textContent = (r === 'good' ? 'Tuyệt! Đã ghi là trả lời tốt.' : 'Đã ghi: câu này cần ôn lại.') + (pts ? ` +${pts} ⚡` : '');
+          rated.hidden = false; rated.textContent = (r === 'good' ? 'Tuyệt! Đã ghi là trả lời tốt.' : 'Đã ghi: câu này cần ôn lại.') + (pts ? ` +${pts} điểm` : '');
           paint(); updateStats(); applyFilters(false);
         } }, label);
         const model = el('div.q-model', { id: modelId, hidden: true },
           el('div.fc-answer', { tabindex: '-1' }, el('div.fc-label', null, 'Câu trả lời mẫu'), el('div', { html: blocks(it.modelAnswer) })),
           el('div.fc-label', null, 'Ý chính cần có'),
           el('ul.q-kp', null, it.keyPoints.map((k) => el('li', { html: inline(k) }))),
-          it.step.explanation ? el('p.ex-sub', null, '💡 ', el('span', { html: inline(it.step.explanation) })) : null,
+          it.step.explanation ? el('p.ex-sub.fc-tip', null, icon('lightbulb', 16), el('span', { html: inline(it.step.explanation) })) : null,
           el('div.fc-label', null, 'Em tự thấy mình trả lời thế nào?'),
-          el('div.fc-rate', null, rateBtn('good', '👍 Đã trả lời tốt'), rateBtn('again', '🔁 Cần ôn lại')), rated);
+          el('div.fc-rate', null, rateBtn('good', [icon('thumbs-up', 16), 'Đã trả lời tốt']), rateBtn('again', [icon('repeat', 16), 'Cần ôn lại'])), rated);
         showModel.addEventListener('click', () => {
           const open = model.hidden;
           model.hidden = !open;
           showModel.setAttribute('aria-expanded', String(open));
-          showModel.textContent = open ? '🙈 Ẩn câu trả lời mẫu' : '👀 Xem câu trả lời mẫu';
+          showModel.replaceChildren(icon(open ? 'eye-off' : 'eye', 16), el('span', null, open ? 'Ẩn câu trả lời mẫu' : 'Xem câu trả lời mẫu'));
           if (open) model.querySelector('.fc-answer').focus();
         });
         body.append(
-          el('p.q-where', null, it.lessonId ? `${it.unitIcon} Chương ${it.unitIndex} · ${it.lessonTitle}` : `${it.unitIcon} Chương ${it.unitIndex}`,
+          el('p.q-where', null, it.lessonId ? `Chương ${it.unitIndex} · ${it.lessonTitle}` : `Chương ${it.unitIndex}`,
             it.src === 'bank' ? ' · câu của đề thi thử' : ''),
           grader.el,
           el('div.q-actions', null, showModel, lessonLink),
@@ -178,11 +176,12 @@ export function render(root, params, { course, store }) {
         if (st.key !== 'new') done++;
         if (st.key === 'ai') { ai++; sum += st.best; }
       }
+      const bar = el('span.q-stats-bar', { role: 'progressbar', 'aria-label': 'Đã luyện', 'aria-valuemin': 0, 'aria-valuemax': total, 'aria-valuenow': done },
+        el('span', { style: { width: `${total ? (done / total) * 100 : 0}%` } }));
       statsBox.replaceChildren(...[
-        el('span.pill.good', null, `✅ Đã luyện ${done}/${total}`),
-        el('span.pill', null, `🤖 Đã chấm AI ${ai}`),
-        ai ? el('span.pill', null, `⭐ Điểm AI tốt nhất TB ${fmtScore(sum / ai)}/10`) : null,
-        el('span.pill.again', null, `🆕 Chưa luyện ${total - done}`)].filter(Boolean));
+        el('span', null, bar, `Đã luyện ${done}/${total}`),
+        el('span', null, `Đã chấm AI ${ai}`),
+        ai ? el('span', null, `Điểm AI trung bình ${fmtScore(sum / ai)}/10`) : null].filter(Boolean));
     }
 
     function visible(it) {

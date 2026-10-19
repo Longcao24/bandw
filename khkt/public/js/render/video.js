@@ -1,12 +1,13 @@
 // Video step: MP4 + poster + Vietnamese WebVTT, chapters, progress on ≥90% / ended, sim fallback.
 import { el } from '../util.js';
+import { icon } from '../icons.js';
 import { videoById, videoFiles } from '../videos.js';
 import { inline } from './markdown.js';
 import { mountSim } from './sim-host.js';
 
 const fmt = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
-export function renderVideo(step, { store } = {}) {
+export function renderVideo(step, { store, showTitle = true } = {}) {
   const meta = videoById(step.id) || { title: step.title || step.id };
   const files = videoFiles(step.id);
   const video = el('video', { controls: true, preload: 'metadata', playsinline: true, poster: files.jpg, 'aria-label': step.title || meta.title });
@@ -15,8 +16,9 @@ export function renderVideo(step, { store } = {}) {
     el('track', { kind: 'subtitles', srclang: 'vi', label: 'Tiếng Việt', src: files.vtt, default: true }),
   );
   const holder = el('div.video-frame', null, video);
+  // Inside a lesson step the card heading already names the video: no second title.
   const fig = el('figure.video', null,
-    el('div.video-head', null, el('span.badge', { 'aria-hidden': 'true' }, '🎬'), el('strong', null, step.title || meta.title)),
+    showTitle ? el('div.video-head', null, icon('video', 18), el('strong', null, step.title || meta.title)) : null,
     holder);
   let sim = null;
   let failed = false;
@@ -30,7 +32,7 @@ export function renderVideo(step, { store } = {}) {
     if (failed) return;
     failed = true;
     holder.replaceChildren(el('div.video-missing', { role: 'note' },
-      el('span', { 'aria-hidden': 'true' }, '🎞️'),
+      el('span', { 'aria-hidden': 'true' }, icon('video', 22)),
       el('p', null, el('strong', null, 'Video đang được chuẩn bị.'),
         step.fallbackSim ? ' Trong lúc chờ, em xem mô phỏng bên dưới nhé.' : ' Em tiếp tục bài học nhé.')));
     if (chapters) chapters.hidden = true;

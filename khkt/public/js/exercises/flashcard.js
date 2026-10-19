@@ -5,6 +5,7 @@ import { el } from '../util.js';
 import { inline, blocks } from '../render/markdown.js';
 import { announce } from '../a11y.js';
 import { createGrader } from '../grading/panel.js';
+import { icon } from '../icons.js';
 
 /**
  * Reusable card view. opts: { onRate(r), showPrompt:boolean, previous, store, ai:boolean }
@@ -15,13 +16,13 @@ export function flashcardView(step, { onRate, showPrompt = false, previous = nul
   const root = el('div.flashcard');
   const front = el('div.fc-front', null,
     showPrompt ? el('div.fc-question', { html: inline(step.prompt) }) : null,
-    el('p.fc-say', null, el('span', { 'aria-hidden': 'true' }, '🎤 '), 'Hãy tự trả lời thành tiếng trước, rồi mới lật thẻ.'));
-  const flip = el('button.btn.primary.fc-flip', { type: 'button' }, '🔄 Lật thẻ');
+    el('p.fc-say', null, icon('mic', 18), el('span', null, 'Tự trả lời thành tiếng trước, rồi mới lật thẻ để so với câu trả lời mẫu.')));
+  const flip = el('button.btn.primary.fc-flip', { type: 'button' }, icon('refresh', 18), 'Lật thẻ');
   front.append(flip);
   let grader = null;
   const aiBox = el('div.fc-ai', { hidden: true });
   const aiBtn = ai ? el('button.btn.fc-ai-btn', { type: 'button', 'aria-expanded': 'false', 'aria-controls': `fc-ai-${step.id}`.replace(/\./g, '-') },
-    el('span', { 'aria-hidden': 'true' }, '✍️ '), 'Tự trả lời & chấm bằng AI') : null;
+    icon('sparkles', 18), 'Viết câu trả lời & chấm bằng AI') : null;
   if (aiBtn) {
     aiBox.id = aiBtn.getAttribute('aria-controls');
     front.append(aiBtn);
@@ -37,7 +38,7 @@ export function flashcardView(step, { onRate, showPrompt = false, previous = nul
       if (open) grader.focus();
     });
   }
-  const hint = el('p.fc-ai-hint', null, '👉 Bấm ', el('strong', null, '🔄 Lật thẻ'), ' để so với câu trả lời mẫu và tự đánh giá.');
+  const hint = el('p.fc-ai-hint', null, 'Bấm ', el('strong', null, 'Lật thẻ'), ' để so với câu trả lời mẫu và tự đánh giá.');
   const back = el('div.fc-back', { hidden: true });
   const checks = el('ul.fc-points', { 'aria-label': 'Ý chính cần có' },
     step.keyPoints.map((k, i) => {
@@ -45,16 +46,16 @@ export function flashcardView(step, { onRate, showPrompt = false, previous = nul
       return el('li', null, el('input', { type: 'checkbox', id }), el('label', { for: id, html: inline(k) }));
     }));
   const rated = el('p.fc-rated', { hidden: true, role: 'status' });
-  const good = el('button.btn.success', { type: 'button' }, '👍 Đã trả lời tốt');
-  const again = el('button.btn', { type: 'button' }, '🔁 Cần ôn lại');
+  const good = el('button.btn.success', { type: 'button' }, icon('thumbs-up', 18), 'Đã trả lời tốt');
+  const again = el('button.btn', { type: 'button' }, icon('repeat', 18), 'Cần ôn lại');
   back.append(
     el('div.fc-answer', null, el('div.fc-label', null, 'Câu trả lời mẫu'), el('div', { html: blocks(step.modelAnswer) })),
     // Coaching note for the team (not part of the model answer, never sent to the AI grader).
-    ...(step.explanation ? [el('p.ex-sub.fc-tip', null, '💡 ', el('span', { html: inline(step.explanation) }))] : []),
+    ...(step.explanation ? [el('p.ex-sub.fc-tip', null, icon('lightbulb', 16), el('span', { html: inline(step.explanation) }))] : []),
     el('div.fc-label', null, 'Em đã nói được những ý nào? (tự đánh dấu)'), checks,
     el('div.fc-rate', null, good, again), rated);
   root.append(front, aiBox, back);
-  if (previous) root.append(el('p.ex-sub', null, previous.r === 'good' ? 'Lần trước: 👍 Đã trả lời tốt' : 'Lần trước: 🔁 Cần ôn lại'));
+  if (previous) root.append(el('p.ex-sub', null, previous.r === 'good' ? 'Lần trước: đã trả lời tốt' : 'Lần trước: cần ôn lại'));
   flip.addEventListener('click', () => {
     back.hidden = false; flip.hidden = true; root.classList.add('flipped'); hint.remove();
     announce('Đã lật thẻ');
@@ -66,7 +67,7 @@ export function flashcardView(step, { onRate, showPrompt = false, previous = nul
     good.setAttribute('aria-pressed', String(r === 'good')); again.setAttribute('aria-pressed', String(r === 'again'));
     const pts = onRate ? onRate(r) : 0;
     rated.hidden = false;
-    rated.textContent = (r === 'good' ? 'Tuyệt! Thẻ này sẽ được ôn ít hơn.' : 'Không sao, thẻ này sẽ quay lại sớm.') + (pts ? ` +${pts} ⚡` : '');
+    rated.textContent = (r === 'good' ? 'Tuyệt! Thẻ này sẽ được ôn ít hơn.' : 'Không sao, thẻ này sẽ quay lại sớm.') + (pts ? ` +${pts} điểm` : '');
   };
   good.addEventListener('click', () => rate('good'));
   again.addEventListener('click', () => rate('again'));

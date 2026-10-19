@@ -6,6 +6,7 @@ import { inline, blocks } from '../render/markdown.js';
 import { announce } from '../a11y.js';
 import { gradeAnswer, GradeError, checkAnswer, errorMessage, fmtScore, scoreBand, bandLabel, MAX_CHARS, MIN_CHARS } from './api.js';
 import { micButton } from './speech.js';
+import { icon } from '../icons.js';
 
 let seq = 0;
 
@@ -21,9 +22,9 @@ export function scoreRing(score, size = 92) {
     <text x="50%" y="72%" text-anchor="middle" font-size="${Math.round(size / 8.5)}" class="gr-ring-s">/ 10</text></svg>`);
 }
 
-/** Small "🤖 8,5" badge for lists. */
+/** Small "AI 8,5" badge for lists. */
 export function scoreBadge(best) {
-  return el('span.gr-badge', { class: scoreBand(best), title: `Điểm AI tốt nhất: ${fmtScore(best)}/10` }, '🤖 ', fmtScore(best), el('span.sr-only', null, ' trên 10 điểm AI'));
+  return el('span.gr-badge', { class: scoreBand(best), title: `Điểm AI tốt nhất: ${fmtScore(best)}/10` }, el('span.gr-badge-k', { 'aria-hidden': 'true' }, 'AI'), fmtScore(best), el('span.sr-only', null, ' trên 10 điểm AI'));
 }
 
 /** Result block (also used read-only). */
@@ -32,7 +33,7 @@ export function renderResult(res, { best = null, improvedNow = false } = {}) {
     el('div.gr-top-t', null,
       el('p.gr-score', null, el('strong', null, `${fmtScore(res.score)}/10`), el('span.sr-only', null, ' điểm')),
       el('p.gr-band', null, bandLabel(res.score)),
-      best !== null ? el('p.gr-best', null, improvedNow && res.score >= best ? '🏅 Điểm AI tốt nhất mới của em!' : `Điểm AI tốt nhất: ${fmtScore(best)}/10`) : null));
+      best !== null ? el('p.gr-best', null, improvedNow && res.score >= best ? 'Điểm AI tốt nhất mới của em!' : `Điểm AI tốt nhất: ${fmtScore(best)}/10`) : null));
   const ok = res.points.filter((p) => p.ok).length;
   const points = res.points.length ? el('div.gr-sec', null,
     el('h4.gr-h', null, `Ý chính: nói được ${ok}/${res.points.length}`),
@@ -41,11 +42,11 @@ export function renderResult(res, { best = null, improvedNow = false } = {}) {
       el('span.sr-only', null, p.ok ? ' (đã nói được)' : ' (còn thiếu)'))))) : null;
   const extra = res.extraMissing.length ? el('div.gr-sec', null, el('h4.gr-h', null, 'Nên nói thêm'),
     el('ul.gr-list', null, res.extraMissing.map((m) => el('li', { html: inline(m) })))) : null;
-  const errors = res.errors.length ? el('div.gr-sec.gr-errors', { role: 'note' }, el('h4.gr-h', null, '⚠️ Chưa đúng với dự án'),
+  const errors = res.errors.length ? el('div.gr-sec.gr-errors', { role: 'note' }, el('h4.gr-h', null, icon('alert', 16), 'Chưa đúng với dự án'),
     el('ul.gr-list', null, res.errors.map((m) => el('li', { html: inline(m) })))) : null;
-  const fb = res.feedback ? el('div.gr-sec', null, el('h4.gr-h', null, '💬 Nhận xét'), el('div.gr-fb', { html: blocks(res.feedback) })) : null;
-  const imp = res.improved ? el('details.gr-improved', null, el('summary', null, '✨ Câu trả lời gợi ý tốt hơn'), el('div', { html: blocks(res.improved) })) : null;
-  const fbNote = res.fallback ? el('p.gr-fallback', { role: 'note' }, 'ℹ️ Máy chấm chính đang bận nên máy dự phòng đã chấm. Điểm này chỉ để tham khảo, không lưu làm điểm tốt nhất.') : null;
+  const fb = res.feedback ? el('div.gr-sec', null, el('h4.gr-h', null, 'Nhận xét'), el('div.gr-fb', { html: blocks(res.feedback) })) : null;
+  const imp = res.improved ? el('details.gr-improved', null, el('summary', null, icon('chevron-right', 16, 'gr-sum-chev'), 'Câu trả lời gợi ý tốt hơn'), el('div', { html: blocks(res.improved) })) : null;
+  const fbNote = res.fallback ? el('p.gr-fallback', { role: 'note' }, 'Máy chấm chính đang bận nên máy dự phòng đã chấm. Điểm này chỉ để tham khảo, không lưu làm điểm tốt nhất.') : null;
   return el('div.gr-res', null, head, fbNote, points, errors, extra, fb, imp);
 }
 
@@ -75,7 +76,7 @@ export function createGrader(question, opts = {}) {
   paintCount();
   const mic = micButton(ta);
 
-  const btn = el('button.btn.primary.gr-go', { type: 'button' }, el('span', { 'aria-hidden': 'true' }, '🤖 '), 'Chấm bằng AI');
+  const btn = el('button.btn.primary.gr-go', { type: 'button' }, icon('sparkles', 18), el('span', null, 'Chấm bằng AI'));
   const best0 = store && store.grade ? store.grade(question.id) : null;
   const bestLine = el('span.gr-bestline', { hidden: !best0 }, best0 ? `Điểm AI tốt nhất: ${fmtScore(best0.best)}/10` : '');
   const status = el('div.gr-status', { role: 'status', 'aria-live': 'polite' });
@@ -97,7 +98,7 @@ export function createGrader(question, opts = {}) {
   }
   function showError(msg) {
     status.className = 'gr-status err';
-    status.replaceChildren(el('span', { 'aria-hidden': 'true' }, '⚠️ '), msg);
+    status.replaceChildren(icon('alert', 18), el('span', null, msg));
   }
 
   async function grade() {

@@ -3,9 +3,9 @@ import { el, svgNode } from '../util.js';
 import { GRADED } from '../progress/store.js';
 
 export const STATUS = {
-  new: { icon: '○', label: 'Chưa học', btn: 'Học' },
-  started: { icon: '◐', label: 'Đang học', btn: 'Học tiếp' },
-  mastered: { icon: '★', label: 'Thành thạo', btn: 'Ôn lại' },
+  new: { icon: 'circle', label: 'Chưa học', btn: 'Học' },
+  started: { icon: 'circle-half', label: 'Đang học', btn: 'Học tiếp' },
+  mastered: { icon: 'circle-done', label: 'Thành thạo', btn: 'Ôn lại' },
 };
 
 export const findUnit = (course, id) => course.units.find((u) => u.id === id) || null;
@@ -34,6 +34,6 @@ export function progressBar(value, max, { label } = {}) {
     el('div.pbar-fill', { style: { width: pct + '%' } }));
 }
 
-export function pageHeader(title, sub) {
-  return el('header.page-head', null, el('h1', { tabindex: '-1' }, title), sub ? el('p.lead', null, sub) : null);
+export function pageHeader(title, sub, extra = null) {
+  return el('header.page-head', null, el('h1', { tabindex: '-1' }, title), sub ? el('p.lead', null, sub) : null, extra);
 }
