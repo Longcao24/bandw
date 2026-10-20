@@ -96,7 +96,7 @@ $('connect').addEventListener('click', async () => {
       selectedPort = port; needBootPort = false;
       status('Đã chọn cổng nạp', 'Bấm Nạp BandW vào vòng tay. Giữ cáp USB và tab này mở cho đến khi hoàn tất.');
       $('step-connect').classList.remove('active'); $('step-flash').classList.add('active');
-      $('connection-hint').textContent = 'Firmware v0.3.0 · Có nút hiệu chuẩn từ app Android.';
+      $('connection-hint').textContent = 'Firmware v0.5.0 · 5 cử chỉ, tự kết nối lại · Cần app Android 0.5.0.';
     } else {
       status('Đang chuyển sang chế độ nạp…', 'Trang đang khởi động lại board qua USB. Bạn không cần nhấn nút Reset.');
       await port.open({ baudRate: 1200 });
