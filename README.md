@@ -8,7 +8,7 @@ App Android native cho prototype vòng tay XIAO nRF52840 Sense. Bản 0.3.0 hỗ
 
 ## Tải và cài APK
 
-[Tải APK v0.3.0](https://github.com/Longcao24/bandw/releases/download/v0.3.0/BandW-0.3.0-debug.apk) · [Tất cả bản phát hành](https://github.com/Longcao24/bandw/releases)
+[Tải APK v0.5.0](https://github.com/Longcao24/bandw/releases/download/v0.5.0/BandW-0.5.0-debug.apk) · [Tất cả bản phát hành](https://github.com/Longcao24/bandw/releases)
 
 Mở link APK trên điện thoại Android 8.0+, tải xuống rồi mở file để cài. Nếu Android hỏi, cho phép trình duyệt hoặc ứng dụng quản lý file **Cài đặt ứng dụng không rõ nguồn gốc**. Đây là APK debug dành cho demo, chưa phát hành trên Play Store.
 
@@ -42,7 +42,7 @@ App chỉ nhận BLE khi mở ở foreground. Rời app, khóa hoặc xoay màn 
 
 ## Hiệu chuẩn từ app
 
-Sau khi kết nối, bấm **Hiệu chuẩn vòng tay**, giữ tay ở tư thế trung tính khoảng 2 giây và chờ **Đã hiệu chuẩn**. Trong lúc hiệu chuẩn, board tạm ngừng nhận cử chỉ. Nếu quá 30 giây chưa xong, app báo lỗi và ngắt kết nối để thử lại. Firmware cũ vẫn nhận cử chỉ nhưng nút hiệu chuẩn bị tắt; cần nạp firmware mới đi kèm v0.3.0.
+Sau khi kết nối, bấm **Hiệu chuẩn vòng tay**, giữ tay ở tư thế trung tính khoảng 2 giây và chờ **Đã hiệu chuẩn**. Trong lúc hiệu chuẩn, board tạm ngừng nhận cử chỉ. Nếu quá 30 giây chưa xong, app báo và cho bấm Hiệu chuẩn lại, vẫn giữ kết nối. Firmware cũ vẫn nhận cử chỉ nhưng nút hiệu chuẩn bị tắt; nên nạp firmware 0.5.0 đi kèm app 0.5.0.
 
 ## Cấu trúc
 
