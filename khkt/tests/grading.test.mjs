@@ -75,10 +75,10 @@ test('gradeAnswer: posts {id, answer} only (no learner code), maps HTTP errors',
   await assert.rejects(gradeAnswer({ id: 'a', answer: 'đủ dài để gửi lên máy chấm', fetchImpl: async () => ({ ok: true, status: 200, headers: new Map(), json: async () => ({}) }) }), (e) => e.kind === 'bad');
 });
 
-test('defense index: exactly 200 questions, unique ids, gradable, every one reachable from a lesson', () => {
+test('defense index: exactly 213 questions, unique ids, gradable, every one reachable from a lesson', () => {
   const list = idx.list();
   assert.equal(idx.count(), list.length);
-  assert.equal(list.length, 200, `có ${list.length} câu phản biện (mục tiêu 200)`);
+  assert.equal(list.length, 213, `có ${list.length} câu phản biện (mục tiêu 213)`);
   assert.equal(new Set(list.map((x) => x.id)).size, list.length);
   list.forEach((it, i) => {
     assert.equal(it.n, i + 1);
@@ -97,7 +97,7 @@ test('defense index: exactly 200 questions, unique ids, gradable, every one reac
   assert.equal(idx.byId('nope'), null);
 });
 
-test('defense index: 200 = lesson flashcards + bank.open, all ids unique course-wide, every card resolves to a real lesson', async () => {
+test('defense index: 213 = lesson flashcards + bank.open, all ids unique course-wide, every card resolves to a real lesson', async () => {
   const { course } = await import('../public/content/index.js');
   const bank = (await import('../public/content/exam/bank.js')).default;
   let lessonCards = 0;
@@ -112,7 +112,7 @@ test('defense index: 200 = lesson flashcards + bank.open, all ids unique course-
   }
   const open = bank.open.filter((q) => q.type === 'flashcard');
   for (const q of open) allCardIds.push(q.id);
-  assert.equal(lessonCards + open.length, 200, `lesson cards ${lessonCards} + bank.open ${open.length}`);
+  assert.equal(lessonCards + open.length, 213, `lesson cards ${lessonCards} + bank.open ${open.length}`);
   assert.equal(idx.count(), lessonCards + open.length);
   assert.equal(new Set(allCardIds).size, allCardIds.length, 'flashcard ids must be unique across lessons, unit.defense and bank.open');
   for (const it of idx.list()) {
@@ -183,7 +183,7 @@ test('store.recordGrade keeps the best score and syncs it; full course still fit
   assert.deepEqual(store.grade('u01.l1.q6'), { best: 6.5, last: 4, n: 2, at: 1010 });
   assert.equal(store.recordGrade('not-an-id', 5), null);
   assert.ok(store.recordGrade('x.d.q03', 10));
-  // worst realistic payload: every lesson exercise + every lesson card + 30 exams + all 200 AI grades
+  // worst realistic payload: every lesson exercise + every lesson card + 30 exams + all 213 AI grades
   const p = emptyProgress();
   const ts = 1792423561831;
   for (const u of course.units) for (const l of u.lessons) {
@@ -191,9 +191,9 @@ test('store.recordGrade keeps the best score and syncs it; full course still fit
     for (const st of l.steps) if (GRADED.has(st.type)) p.ex[st.id] = { c: 1, a: 3, p: 10, t: ts };
   }
   for (const it of idx.list()) { p.cards[it.id] = { r: 'again', n: 12, at: ts }; p.ai[it.id] = { b: 85, l: 70, n: 12, at: ts }; }
-  for (let i = 0; i < LIMITS.exams; i++) p.exams[`e${String(i).padStart(10, '0')}`] = { m: 'full', at: ts + i, s: 25, n: 30, d: 1700, u: Object.fromEntries([...Array(10)].map((_, k) => [`u${String(k + 1).padStart(2, '0')}`, [3, 3]])) };
+  for (let i = 0; i < LIMITS.exams; i++) p.exams[`e${String(i).padStart(10, '0')}`] = { m: 'full', at: ts + i, s: 25, n: 30, d: 1700, u: Object.fromEntries([...Array(course.units.length)].map((_, k) => [`u${String(k + 1).padStart(2, '0')}`, [3, 3]])) };
   const clean = sanitizeProgress(p);
-  assert.equal(Object.keys(clean.ai).length, 200);
+  assert.equal(Object.keys(clean.ai).length, 213);
   const bytes = new TextEncoder().encode(JSON.stringify(clean)).byteLength;
   assert.ok(bytes < MAX_BYTES, `${bytes} B ≥ ${MAX_BYTES}`);
 });

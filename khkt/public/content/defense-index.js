@@ -34,12 +34,14 @@ export const TOPICS = [
   { id: 'app', label: 'App Android & giọng nói', icon: '📱' },
   { id: 'thi-nghiem', label: 'Thử nghiệm, độ chính xác & hạn chế', icon: '🧪' },
   { id: 'an-toan', label: 'An toàn, riêng tư, đạo đức & chi phí', icon: '🛡️' },
+  { id: 'tinyml', label: 'Học máy & TinyML', icon: '🤖' },
   { id: 'khac', label: 'Khác', icon: '❓' },
 ];
 const TOPIC_BY_ID = new Map(TOPICS.map((t) => [t.id, t]));
 
 // Writer tags → group (checked first, order = priority).
 const TAG_RULES = [
+  ['tinyml', /tinyml|hoc may|mo hinh|luong tu|dac trung/],
   ['an-toan', /an toan|bao mat|rieng tu|dao duc|chi phi|gia thanh|y te/],
   ['thi-nghiem', /thi nghiem|kiem thu|ma tran|nguoi thu|phuong phap|chinh xac|han che|do dac|so lieu|cau hoi bay/],
   ['y-tuong', /nguoi dung|nhu cau|tinh moi|so sanh|thuong mai|phat trien|y tuong|ung dung|run tay|yeu co|lam viec nhom/],
@@ -51,6 +53,7 @@ const TAG_RULES = [
 ];
 // Fallback on the question text when a card has no (recognisable) tag. Order = priority.
 const RULES = [
+  ['tinyml', /tinyml|hoc may|mo hinh|luong tu|huan luyen/],
   ['thi-nghiem', /thi nghiem|kiem thu|chinh xac|han che|do (bang|nhu|the nao|duoc)|nguoi that|ma tran nham|bao nhieu nguoi|ty le|ti le|chua do|gesture_test/],
   ['an-toan', /an toan|dao duc|rieng tu|chi phi|gia thanh|bao nhieu tien|y te|nguy hiem|thay the nguoi/],
   ['ble', /bluetooth|\bble\b|ket noi|noi lai|notify|gatt|characteristic|quang ba|ngat/],

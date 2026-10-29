@@ -1,6 +1,6 @@
 # Firmware BandW — XIAO nRF52840 Sense
 
-MVP rule-based, không train AI. Dùng IMU LSM6DS3 tích hợp và BLE để gửi lệnh tới app Android BandW 0.3.0 (`YES`/`HELP` cần app 0.5.0 trở lên).
+MVP rule-based, không train AI. Hướng nghiên cứu TinyML (chưa có trong firmware): xem [TINYML.md](TINYML.md). Dùng IMU LSM6DS3 tích hợp và BLE để gửi lệnh tới app Android BandW 0.3.0 (`YES`/`HELP` cần app 0.5.0 trở lên).
 
 | Cử chỉ | Payload ASCII | Câu trên Android |
 |---|---|---|

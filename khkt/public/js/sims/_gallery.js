@@ -72,6 +72,10 @@ const SAMPLES = [
   ['imu-chart', { preset: 'walk' }],
   ['imu-chart', { preset: 'help-short', signals: ['pitch'] }],
   ['gesture-gallery', { highlight: 'HELP' }],
+  ['tinyml-classifier', { label: 'WATER' }],
+  ['tinyml-classifier', { label: 'NONE', take: 3, int8: true }],
+  ['tinyml-training', { people: 1, takes: 1 }],
+  ['tinyml-training', { people: 6, takes: 10, samePeople: true }],
 ];
 
 const list = document.getElementById('g-list');

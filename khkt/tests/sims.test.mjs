@@ -9,7 +9,7 @@ const SIMS = [
   'system-flow', 'imu-axes-3d', 'tilt-angle', 'gyro-speed', 'calibration',
   'threshold-hysteresis', 'hold-timer', 'gesture-state-machine', 'shake-counter',
   'double-tap', 'forward-flex', 'main-loop', 'code-stepper', 'ble-flow',
-  'tts-pipeline', 'confusion-matrix', 'imu-chart', 'gesture-gallery',
+  'tts-pipeline', 'confusion-matrix', 'imu-chart', 'gesture-gallery', 'tinyml-classifier', 'tinyml-training',
 ];
 const dir = new URL('../public/js/sims/', import.meta.url);
 

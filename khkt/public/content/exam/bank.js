@@ -274,6 +274,20 @@ export default {
     { id: 'x.q50', unitId: 'u09', lessonId: 'l4', type: 'mcq', prompt: 'Vì sao firmware **không** gửi số liệu cảm biến thô lên điện thoại, chỉ gửi một từ như `WATER`?',
       options: ['Vì Bluetooth không gửi được số', 'Gọn, ít tốn pin, và điện thoại không nhận dữ liệu chuyển động chi tiết của người dùng', 'Vì app không hiển thị được đồ thị', 'Vì giám khảo yêu cầu'], answer: 1,
       explanation: 'Characteristic lệnh chỉ dài tối đa 8 byte. Gửi một từ vừa nhẹ vừa bảo vệ riêng tư: không có dữ liệu chuyển động thô rời khỏi vòng tay.' },
+
+    // ---- Chương 11: TinyML (kế hoạch, dữ liệu tổng hợp) ----
+    { id: 'x.q51', unitId: 'u11', lessonId: 'l1', type: 'mcq', prompt: 'Trong TinyML, bước nào chạy **trên vòng tay**?',
+      options: ['Thu thập và gán nhãn dữ liệu', 'Huấn luyện mô hình', 'Suy luận: đoán cử chỉ từ cửa sổ dữ liệu mới', 'Chọn số người tham gia thí nghiệm'], answer: 2,
+      explanation: 'Huấn luyện làm trên máy tính. Vòng tay chỉ chạy bước đoán (suy luận) với trọng số đã huấn luyện, rồi gửi một từ qua BLE như cũ.' },
+    { id: 'x.q52', unitId: 'u11', lessonId: 'l2', type: 'number', prompt: 'Cửa sổ 1,5 giây ở 50 mẫu/giây, mỗi mẫu 6 trục. Một cửa sổ có bao nhiêu con số?',
+      answer: 450, tolerance: 0, unit: 'số',
+      explanation: '1,5 × 50 = 75 mẫu; 75 × 6 = 450 con số.' },
+    { id: 'x.q53', unitId: 'u11', lessonId: 'l4', type: 'hotspot', prompt: 'Chạm vào phần cho biết mô hình nhầm cử chỉ nào thành cử chỉ nào trên **tập kiểm tra**.',
+      target: { kind: 'sim', sim: 'tinyml-training', props: { people: 2, takes: 3 } }, answer: 'matrix',
+      explanation: 'Ma trận nhầm lẫn: hàng là cử chỉ thật, cột là mô hình đoán. Ô ngoài đường chéo là chỗ nhầm cần cải thiện.' },
+    { id: 'x.q54', unitId: 'u11', lessonId: 'l6', type: 'truefalse', prompt: 'Theo kế hoạch TinyML, mô hình chỉ đề xuất ứng viên; luật về trung tính, nghỉ 650 ms, HELP và YES vẫn giữ nguyên.',
+      answer: true,
+      explanation: 'Đúng. Đó là kiến trúc lai trong firmware/TINYML.md: mô hình thay bước nhận ra cử chỉ, các luật an toàn đã kiểm thử giữ nguyên.' },
   ],
 
   // ───────────────────────── câu hỏi mở cho "Phản biện thử" ─────────────────────────

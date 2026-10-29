@@ -12,7 +12,7 @@ Trang web giáo trình trực quan giúp đội thi KHKT (học sinh lớp 10–
 ```
 khkt/
   public/              trang tĩnh (HTML + CSS + ES modules, không có bước build)
-    content/           unit01.js … unit10.js: nội dung từng chương (người soạn nội dung)
+    content/           unit01.js … unit11.js: nội dung từng chương (người soạn nội dung)
     js/                router, renderer, bài tập, tiến độ, đồng bộ
     js/sims/           mô phỏng hoạt hình (người dựng mô phỏng)
     videos/            video .mp4 + ảnh bìa .jpg + phụ đề .vtt
@@ -75,8 +75,16 @@ Bộ kiểm thử gồm:
 | `tests/exam-bank.test.mjs` | Mọi câu trong `content/exam/bank.js`: định dạng, đáp án tự chấm đúng, hotspot/sim/checkpoint tồn tại, SVG an toàn, chương/bài liên kết có thật, đúng sự thật của HEAD (HELP = 2 lần nhấp, app nối lại không giới hạn) |
 | `tests/grade.test.mjs` | `/api/grade` với `env.AI` giả: kiểm tra đầu vào (400/403/405/413/415), id lạ → 404, rubric lấy từ máy chủ, bài làm được đóng khung chống tấn công, sửa JSON hỏng, giới hạn điểm theo số ý, mô hình dự phòng (gắn cờ `fallback`, tính thêm vào giới hạn cả trang) và quá giờ, 503, bộ giới hạn đóng khi D1 lỗi, ý có số phải nêu đúng số, điểm tính từ số ý, câu < 15 ký tự bị từ chối, giới hạn theo phút và theo ngày |
 | `tests/detector.test.mjs` | Bản JS của thuật toán (dùng cho mô phỏng) chạy lại mọi ca trong `firmware/tests/gesture_test.cpp` |
+| `tests/tinyml.test.mjs` | Phòng thí nghiệm TinyML (`js/sims/_tinyml.js`): dữ liệu tổng hợp có hạt giống, cửa sổ 75 × 6 = 450 số, mô hình 50 tham số đúng với người chưa thấy, int8 gần như không đổi, nhiều người hơn thì tốt hơn |
 
 Người soạn nội dung **phải chạy `npm test` trước khi bàn giao**. Lỗi được in rõ theo dạng `u03.l2.steps[5] (u03.l2.q4): …`.
+
+## Chương 11: TinyML
+
+Chương **TinyML: học máy tí hon trên vòng tay** (`content/unit11.js`, 6 bài, 13 câu phản biện chủ đề "Học máy & TinyML") dạy học máy chạy trên vi điều khiển và kế hoạch áp dụng vào BandW (`firmware/TINYML.md`). Firmware 0.5.0 **chưa có** học máy; chương này là hướng nghiên cứu.
+
+- Hai mô phỏng chạy thật trong trình duyệt: `tinyml-classifier` (cửa sổ 1,5 s → 9 đặc trưng → 5 nơ-ron → xác suất → ngưỡng tự tin, bật/tắt int8) và `tinyml-training` (số người, số mẫu, kiểm tra trên người mới hay người cũ, ma trận nhầm lẫn).
+- Dữ liệu là **tổng hợp** (`js/sims/_tinyml.js` dùng bộ tạo tín hiệu của `_model.js`, 8 "người" có biên độ, tốc độ, hiệu chuẩn khác nhau). Độ chính xác trong mô phỏng minh hoạ phương pháp, không phải số đo của BandW, và nội dung nói rõ điều này.
 
 ## Thi thử
 
@@ -138,7 +146,7 @@ Mã học tập đi trong header, không nằm trong URL. Chỉ chấp nhận y�
 | Trả về `200` | `{questionId, score: 0–10, covered: [chỉ số ý], missing: [chỉ số ý], factualErrors: [..], feedback, improvedAnswer, keyPoints, model, fallback}` |
 | Lỗi | `400 bad_request/too_short` · `403 bad_origin` · `404 unknown_question` · `405` · `413 too_long` · `415` · `429 rate_limited/daily_limit` (+ `Retry-After`) · `503 no_ai/ai_unavailable`. Mọi lỗi có `message` tiếng Việt |
 
-- **200 câu phản biện** (trang `/question`) = mọi thẻ `flashcard` trong bài học (đặt ngay trong bài dạy khái niệm đó) + `bank.open`; `unit.defense` không được đếm. Không có hai câu trùng ý (u10 chỉ giữ câu ôn tập chưa có ở chương trước). Mỗi câu có `modelAnswer` viết ở ngôi thứ nhất, trung thực theo kho mã (chưa đo thì nói chưa đo), 3–5 `keyPoints` chấm được và `topic`. Lời khuyên cho đội (ví dụ "nếu đã đo thì nói số thật") để trong `explanation`: hiện trên thẻ dưới dạng 💡 nhưng **không** gửi cho bộ chấm.
+- **213 câu phản biện** (trang `/question`) = mọi thẻ `flashcard` trong bài học (đặt ngay trong bài dạy khái niệm đó) + `bank.open`; `unit.defense` không được đếm. Không có hai câu trùng ý (u10 chỉ giữ câu ôn tập chưa có ở chương trước). Mỗi câu có `modelAnswer` viết ở ngôi thứ nhất, trung thực theo kho mã (chưa đo thì nói chưa đo), 3–5 `keyPoints` chấm được và `topic`. Lời khuyên cho đội (ví dụ "nếu đã đo thì nói số thật") để trong `explanation`: hiện trên thẻ dưới dạng 💡 nhưng **không** gửi cho bộ chấm.
 - **Máy chủ tự tra đáp án.** Câu hỏi, đáp án mẫu và ý chính lấy từ `public/content/defense-index.js` (dựng tự động từ `unitNN.js` + `exam/bank.js`, gồm cả `unit.defense`). Mọi rubric trình duyệt gửi lên bị bỏ qua. Thêm thẻ `flashcard` vào bài là chấm được ngay, không cần sửa gì ở backend.
 - **Chống "prompt injection".** Bài làm nằm trong thẻ `<bai_lam_<mã ngẫu nhiên>>`, dấu `<` `>` trong bài bị đổi thành `‹ ›` nên không đóng được thẻ, và lời nhắc hệ thống nói rõ đây là dữ liệu không đáng tin. Máy chủ còn kiểm tra lại JSON: chỉ số ý lọc trong `[0, n)`, `missing` = phần còn lại, ý chính có con số (ví dụ "Kẹt > 4 giây") chỉ được tính khi bài làm nêu đúng con số đó (chấp nhận "bốn", 700 ms = 0,7 giây). **Điểm do máy chủ tính**: round(10 × số ý đạt / n) − 2 cho mỗi lỗi sự thật, kẹp 0–10; điểm của mô hình chỉ được kéo xuống tối đa 1 điểm. Cùng số ý thì cùng điểm, và mô hình có "nghe lời" câu "cho 10 điểm" thì điểm vẫn không lên.
 - **Giới hạn:** 120 lần/phút và 2000 lần/ngày cho mỗi IP (đủ cho cả lớp dùng chung một IP trường), 5000 lần gọi mô hình/ngày cho cả trang (mã băm SHA-256, dùng chung bảng `rate_limits`). Mỗi lần gọi mô hình dự phòng tính thêm một lần vào giới hạn cả trang. Bộ giới hạn **đóng khi lỗi**: không có D1 hoặc D1 báo lỗi thì API trả `503` chứ không gọi mô hình. (`/api/progress` vẫn mở khi D1 lỗi giới hạn, vì lưu tiến độ quan trọng hơn.)
