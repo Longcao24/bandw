@@ -130,8 +130,8 @@ void loop() {
         detector.disarm(); // Require a neutral wrist before each new connection session.
         log(subscribed ? "APP READY" : "APP DISCONNECTED");
         wasSubscribed = subscribed;
-        // A calibration taken before any app connected (often on a table after power-on) is redone once worn.
-        if (subscribed && calibrated && !calibratedWithApp) resetCalibration();
+        // No automatic recalibration on connect (0.5.0 did it and, until the wrist held perfectly still for 2 s,
+        // the band ignored every gesture). Calibrate at power-on or with the app's button, as in v0.4.0.
     }
     // LED: fast blink = calibrating, slow blink = waiting for app, short pulse every 2 s = ready.
     uint32_t ledMs = !calibrated ? 150U : !subscribed ? 800U : ledOn ? 60U : 1940U;

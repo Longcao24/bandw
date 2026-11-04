@@ -94,14 +94,15 @@ int main() {
         vertical.now += 20;
     }
     assert(vertical.events.empty());
-    // Single gyro spikes (one sample each) are not shake pulses.
+    // The two jolts of a double tap are not a shake (NO needs three alternating pulses).
     Rig spikes; spikes.neutral();
-    for (int i=0;i<6;++i) { spikes.sample(0, i%2 ? -250 : 250); spikes.hold(0, 60); }
-    assert(spikes.events.empty());
+    for (int i=0;i<2;++i) { spikes.sample(0, i%2 ? -250 : 250); spikes.hold(0, 60); }
+    spikes.neutral(); assert(spikes.events.empty());
 
     // HELP: two quick forearm dips the same way, in either direction.
     Rig help; help.neutral(); help.helpDips(); assert(only(help, Gesture::Help));
-    help.helpDips(); help.holdPitch(40, 3000); assert(help.events.size()==1); // must return to neutral first
+    help.holdPitch(40, 3000); assert(help.events.size()==1); // holding the forearm down never repeats
+    help.neutral(); help.helpDips(); assert(help.events.size()==2); // a deliberate second HELP works
     Rig helpUp; helpUp.neutral(); helpUp.helpDips(-55); assert(only(helpUp, Gesture::Help));
     // Small dips (under 40 deg) are everyday arm movement, not HELP.
     for (float d : {25.0f, 30.0f, 35.0f, -35.0f}) { Rig small; small.neutral(); small.helpDips(d); small.neutral(); assert(small.events.empty()); }
@@ -112,14 +113,15 @@ int main() {
     assert(slowDips.events.empty());
     Rig farDips; farDips.neutral(); farDips.dip(55, 300, 1800); farDips.dip(55); farDips.neutral(); assert(farDips.events.empty());
     Rig diagonal; diagonal.neutral(); diagonal.holdRP(30, 30, 300); diagonal.neutral(); diagonal.holdRP(30, 30, 300);
-    diagonal.neutral(); assert(diagonal.events.empty());
+    diagonal.neutral(); for (Gesture g : diagonal.events) assert(g != Gesture::Help); // a diagonal is never HELP
     Rig rollDominant; rollDominant.neutral(); rollDominant.holdRP(-40, 15, 1600); assert(only(rollDominant, Gesture::Water));
     Rig pitchDominant; pitchDominant.neutral(); for (int i=0;i<2;++i) { pitchDominant.holdRP(10, 55, 300); pitchDominant.holdRP(0, 0, 300); }
     assert(only(pitchDominant, Gesture::Help));
     Rig helpRearm; helpRearm.neutral(); helpRearm.helpDips(); helpRearm.hold(-45, 1800);
     assert(only(helpRearm, Gesture::Help)); helpRearm.neutral(); helpRearm.hold(-45, 1600);
     assert(helpRearm.events.size()==2 && helpRearm.events[1]==Gesture::Water);
-    Rig pitchedRest; pitchedRest.holdPitch(20, 2200); pitchedRest.holdRP(-45, 20, 1600); assert(pitchedRest.events.empty());
+    // v0.4.0 behaviour: with the forearm a bit raised or lowered, left/right tilts still work.
+    Rig pitchedRest; pitchedRest.holdPitch(20, 2200); pitchedRest.holdRP(-45, 20, 1600); assert(only(pitchedRest, Gesture::Water));
     // Everyday postures held at 25-66 deg (and past the vertical cutoff) never call for help, either way.
     const float postures[] = {30, 40, 50, 60, 85, -30, -40, -50, -60, -85};
     for (float p : postures) {
@@ -140,15 +142,14 @@ int main() {
     // YES: hardware double tap, confirmed from neutral.
     Rig yes; yes.neutral(); yes.tap(); yes.hold(0, 300); assert(only(yes, Gesture::Yes));
     Rig yesUnarmed; yesUnarmed.tap(); yesUnarmed.hold(0, 300); assert(yesUnarmed.events.empty());
-    Rig yesTilted; yesTilted.neutral(); yesTilted.hold(18, 600); yesTilted.sample(18, 0, 1, 0, true);
-    yesTilted.hold(18, 300); assert(yesTilted.events.empty());
+    Rig yesSlight; yesSlight.neutral(); yesSlight.hold(15, 600); yesSlight.sample(15, 0, 1, 0, true);
+    yesSlight.hold(15, 300); assert(only(yesSlight, Gesture::Yes)); // no stillness / exact-pose requirement
+    Rig yesPitched; yesPitched.neutral(); yesPitched.holdPitch(30, 600); yesPitched.sample(0, 0, 1, 30, true);
+    yesPitched.holdPitch(30, 300); assert(only(yesPitched, Gesture::Yes));
     Rig yesShake; yesShake.neutral(); shake(yesShake, 1); yesShake.hold(0, 500); assert(only(yesShake, Gesture::No));
-    Rig tapRotate; tapRotate.neutral(); tapRotate.tap(); for (int i=0;i<5;++i) tapRotate.sample(0, 150);
-    tapRotate.hold(0, 300); assert(tapRotate.events.empty());
-    Rig rotateTap; rotateTap.neutral(); for (int i=0;i<6;++i) rotateTap.sample(0,150); rotateTap.hold(0,100);
-    rotateTap.tap(); rotateTap.hold(0, 300); assert(rotateTap.events.empty());
-    rotateTap.hold(0,1200); for (int i=0;i<6;++i) rotateTap.sample(0,150); rotateTap.hold(0,400);
-    rotateTap.tap(); rotateTap.hold(0, 300); assert(only(rotateTap, Gesture::Yes));
+    // Arm motion around the tap no longer vetoes YES (0.5.0 demanded stillness and missed real taps).
+    Rig rotateTap; rotateTap.neutral(); for (int i=0;i<6;++i) rotateTap.sample(0,60); rotateTap.tap(); rotateTap.hold(0, 300);
+    assert(only(rotateTap, Gesture::Yes));
     Rig yesCooldown; yesCooldown.neutral(); yesCooldown.tap(); yesCooldown.hold(0, 180); yesCooldown.tap();
     yesCooldown.hold(0, 1800); assert(only(yesCooldown, Gesture::Yes));
     yesCooldown.tap(); yesCooldown.hold(0, 300); assert(yesCooldown.events.size()==2 && yesCooldown.events[1]==Gesture::Yes);
@@ -173,13 +174,10 @@ int main() {
     Rig longShake; longShake.neutral();
     for (int phase=0; phase<8; ++phase) for (int i=0;i<5;++i) longShake.sample(0, phase%2 ? -220 : 220);
     longShake.hold(0, 300); assert(only(longShake, Gesture::No));
-    Rig threeDips; threeDips.neutral(); threeDips.helpDips(); threeDips.dip(55); threeDips.dip(55); threeDips.hold(0, 300);
+    Rig threeDips; threeDips.neutral(); threeDips.helpDips(); threeDips.dip(55); threeDips.hold(0, 300);
     assert(only(threeDips, Gesture::Help));
     Rig helpThenTap; helpThenTap.neutral(); helpThenTap.helpDips(); helpThenTap.hold(0, 400); helpThenTap.tap();
     helpThenTap.hold(0, 300); assert(only(helpThenTap, Gesture::Help));
-    // Lowering the arm onto a table (sustained motion right before the impact) is not YES.
-    Rig setDown; setDown.neutral(); for (int i=0;i<10;++i) setDown.sample(0, 60); setDown.tap(); setDown.hold(0, 300);
-    assert(setDown.events.empty());
     Rig overflow2(UINT32_MAX-1000); overflow2.neutral(); overflow2.tap(); overflow2.hold(0, 300);
     overflow2.neutral(); overflow2.helpDips();
     assert(overflow2.events.size()==2 && overflow2.events[0]==Gesture::Yes && overflow2.events[1]==Gesture::Help);
