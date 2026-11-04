@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BandW Live 3D</title>
+<meta name="description" content="Xem trực tiếp vòng tay BandW qua Bluetooth: mô hình 3D, góc nghiêng, tốc độ lắc, trạng thái bộ nhận dạng và ghi dữ liệu.">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<style>
+:root{--bg:#f5f6f0;--card:#fff;--line:#dce2d4;--ink:#243b31;--muted:#66745f;--accent:#234f39;--lime:#d5f28b;
+  --water:#2F6EA5;--food:#9A7410;--no:#B4533A;--yes:#3C7D3A;--help:#B0362A;--grid:#e9ede3;--chart-bg:#fbfcf8}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#121a16;--card:#1a241f;--line:#2c3a32;--ink:#e3ebe2;--muted:#9fb0a0;--accent:#9fd18a;--lime:#c8ea78;--grid:#24312a;--chart-bg:#16201b}}
+:root[data-theme="dark"]{--bg:#121a16;--card:#1a241f;--line:#2c3a32;--ink:#e3ebe2;--muted:#9fb0a0;--accent:#9fd18a;--lime:#c8ea78;--grid:#24312a;--chart-bg:#16201b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{max-width:1240px;margin:auto;display:flex;align-items:center;gap:14px;padding:16px;flex-wrap:wrap}
+.brand{font-weight:850;font-size:26px;letter-spacing:-1.3px;text-decoration:none;color:inherit}
+.tag{font-size:11px;letter-spacing:2px;font-weight:700;color:var(--muted)}
+.sp{flex:1}
+button,select{font:inherit;font-size:14px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:9px 14px;cursor:pointer}
+button.primary{background:var(--accent);color:var(--bg);border-color:transparent;font-weight:650}
+button:disabled{opacity:.45;cursor:not-allowed}
+.status{font-size:13px;color:var(--muted)}
+main{max-width:1240px;margin:auto;padding:0 16px 24px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;min-width:0}
+.card h2{font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin:0 0 10px;font-weight:700}
+#scene{width:100%;height:360px;border-radius:12px;background:var(--chart-bg);display:block}
+.event{display:flex;align-items:center;gap:14px;margin-top:12px;min-height:64px}
+.event .big{font-size:30px;font-weight:800;letter-spacing:-1px}
+.event .phrase{color:var(--muted);font-size:15px}
+.event.flash{animation:fl .9s ease-out}
+@keyframes fl{from{background:var(--lime)}to{background:transparent}}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{font-size:12px;padding:5px 10px;border-radius:20px;border:1px solid var(--line);color:var(--muted)}
+.chip.on{background:var(--accent);color:var(--bg);border-color:transparent}
+.nums{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px}
+.num{background:var(--chart-bg);border-radius:10px;padding:8px}
+.num b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
+.num span{font-size:11px;color:var(--muted)}
+canvas.chart{width:100%;height:150px;display:block;background:var(--chart-bg);border-radius:10px;margin-bottom:10px}
+.legend{font-size:12px;color:var(--muted);margin:-4px 0 10px}
+.legend i{display:inline-block;width:10px;height:3px;vertical-align:middle;margin:0 4px 0 10px;border-radius:2px}
+.log{max-height:150px;overflow:auto;font:12px ui-monospace,Menlo,monospace;color:var(--muted);line-height:1.7}
+.rec{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.rec .count{font:13px ui-monospace,Menlo,monospace;color:var(--muted)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#c33;margin-right:6px;animation:bl 1s infinite}
+@keyframes bl{50%{opacity:.2}}
+.note{font-size:12px;color:var(--muted);line-height:1.6;margin:10px 0 0}
+@media (max-width:900px){main{grid-template-columns:1fr}#scene{height:300px}.nums{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<header>
+  <a class="brand" href="../">bandw.</a><span class="tag">LIVE 3D</span>
+  <span class="sp"></span>
+  <span class="status" id="status">Chưa kết nối</span>
+  <button id="calib" disabled>Hiệu chuẩn</button>
+  <button id="demo">Chạy thử (không cần vòng)</button>
+  <button class="primary" id="connect">Kết nối vòng tay</button>
+</header>
+<main>
+  <section class="card">
+    <h2>Vòng tay</h2>
+    <canvas id="scene" aria-label="Mô hình 3D cẳng tay và vòng tay, xoay theo cảm biến"></canvas>
+    <div class="event" id="event" aria-live="polite"><span class="big" id="evName">—</span><span class="phrase" id="evPhrase">Chưa có cử chỉ</span></div>
+    <div class="chips" id="chips">
+      <span class="chip" data-bit="1" title="Bộ nhận dạng sẵn sàng nhận cử chỉ">Sẵn sàng</span>
+      <span class="chip" data-bit="2" title="Vừa nhận cử chỉ, đang nghỉ 0,65 s">Đang nghỉ</span>
+      <span class="chip" data-bit="3" title="Có gõ đôi, đang chờ xác nhận YES">Chờ YES</span>
+      <span class="chip" data-bit="4" title="Đang nghiêng, đếm thời gian giữ cho WATER/FOOD">Đang giữ nghiêng</span>
+      <span class="chip" data-bit="5" title="Cẳng tay đang trong một lần hạ (HELP)">Đang hạ tay</span>
+      <span class="chip" id="tapChip" title="Cảm biến vừa báo gõ đôi">Gõ đôi!</span>
+    </div>
+    <div class="nums">
+      <div class="num"><b id="nRoll">0°</b><span>Nghiêng (trái − / phải +)</span></div>
+      <div class="num"><b id="nPitch">0°</b><span>Gập cẳng tay</span></div>
+      <div class="num"><b id="nGy">0</b><span>Tốc độ xoay cổ tay °/s</span></div>
+      <div class="num"><b id="nRate">0 Hz</b><span>Mẫu/giây · mất <span id="nLost">0</span></span></div>
+    </div>
+    <p class="note">Màu đỏ trên biểu đồ là ngưỡng của firmware: nghiêng quá ±22° và giữ 0,25 s = WATER/FOOD · lắc qua lại quá ±100°/s 3 lần trong 0,9 s = NO · hạ cẳng tay quá 40° rồi về, 2 lần trong 2 s = HELP · gõ đôi khi cổ tay không nghiêng = YES.</p>
+  </section>
+  <section class="card">
+    <h2>Biểu đồ 10 giây gần nhất</h2>
+    <canvas class="chart" id="cRoll"></canvas>
+    <div class="legend"><i style="background:var(--water)"></i>Nghiêng<i style="background:#c33"></i>±22° vào · ±12° về</div>
+    <canvas class="chart" id="cPitch"></canvas>
+    <div class="legend"><i style="background:var(--help)"></i>Gập cẳng tay<i style="background:#c33"></i>±40° (HELP)</div>
+    <canvas class="chart" id="cGyro"></canvas>
+    <div class="legend"><i style="background:var(--no)"></i>Tốc độ xoay cổ tay<i style="background:#c33"></i>±100°/s (NO) · <span style="color:var(--yes)">▲</span> gõ đôi · nhãn = cử chỉ nhận được</div>
+    <h2 style="margin-top:14px">Ghi dữ liệu để gửi phân tích</h2>
+    <div class="rec">
+      <select id="label" aria-label="Đang làm động tác gì">
+        <option value="rest">Để tay yên</option><option value="WATER">WATER (nghiêng trái)</option><option value="FOOD">FOOD (nghiêng phải)</option>
+        <option value="NO">NO (lắc)</option><option value="YES">YES (gõ đôi)</option><option value="HELP">HELP (hạ tay 2 lần)</option>
+        <option value="cup">Cầm cốc uống nước</option><option value="table">Đặt tay xuống bàn</option><option value="walk">Đi lại, vung tay</option><option value="other">Khác</option>
+      </select>
+      <button id="rec">● Ghi</button>
+      <button id="save" disabled>Tải file CSV</button>
+      <span class="count" id="recCount">0 mẫu</span>
+    </div>
+    <p class="note">Chọn động tác → bấm Ghi → làm động tác đó khoảng 5 lần → đổi động tác (vẫn đang ghi, nhãn tự đổi theo) → bấm Dừng → Tải file CSV và gửi file cho Claude.</p>
+    <h2 style="margin-top:14px">Nhật ký</h2>
+    <div class="log" id="log"></div>
+  </section>
+</main>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+
+const SERVICE = 'c91b0001-7d7a-4f8c-9d29-6e44c786a321';
+const GESTURE = 'c91b0002-7d7a-4f8c-9d29-6e44c786a321';
+const CONTROL = 'c91b0003-7d7a-4f8c-9d29-6e44c786a321';
+const RAW = 'c91b0004-7d7a-4f8c-9d29-6e44c786a321';
+const EVENTS = [null, ['WATER', 'Tôi muốn uống nước.', '--water'], ['FOOD', 'Tôi muốn ăn.', '--food'], ['NO', 'Không.', '--no'], ['YES', 'Có.', '--yes'], ['HELP', 'Tôi cần giúp đỡ.', '--help']];
+const $ = (id) => document.getElementById(id);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+// ---------- data ----------
+const N = 500; // 10 s at 50 Hz
+const buf = { roll: new Float32Array(N), pitch: new Float32Array(N), gy: new Float32Array(N), tap: new Uint8Array(N), ev: new Uint8Array(N) };
+let head = 0, filled = 0, lastSeq = -1, lost = 0, rateCount = 0, latest = null;
+let recording = false, rows = [];
+function log(msg) { const d = new Date(); const line = document.createElement('div'); line.textContent = `${d.toLocaleTimeString()}  ${msg}`; $('log').prepend(line); }
+
+function onSample(s) {
+  if (lastSeq >= 0) { const gap = (s.seq - lastSeq - 1 + 65536) % 65536; if (gap < 1000) lost += gap; }
+  lastSeq = s.seq; rateCount++;
+  buf.roll[head] = s.roll; buf.pitch[head] = s.pitch; buf.gy[head] = s.gy; buf.tap[head] = s.tap; buf.ev[head] = s.event;
+  head = (head + 1) % N; filled = Math.min(N, filled + 1);
+  latest = s;
+  if (s.event) showEvent(s.event);
+  if (s.tap) { const c = $('tapChip'); c.classList.add('on'); setTimeout(() => c.classList.remove('on'), 500); }
+  if (recording) rows.push([Math.round(performance.now()), s.seq, $('label').value, s.ax, s.ay, s.az, s.gx, s.gy, s.gz, s.tap, s.state & 1, (s.state >> 1) & 1, (s.state >> 2) & 1, (s.state >> 3) & 1, (s.state >> 4) & 1, s.event, s.roll.toFixed(1), s.pitch.toFixed(1)]);
+}
+function showEvent(code) {
+  const e = EVENTS[code]; if (!e) return;
+  $('evName').textContent = e[0]; $('evName').style.color = css(e[2]); $('evPhrase').textContent = e[1];
+  const box = $('event'); box.classList.remove('flash'); void box.offsetWidth; box.classList.add('flash');
+  log(`Nhận cử chỉ ${e[0]}`);
+}
+function parse(dv) {
+  const i = (o) => dv.getInt16(o, true);
+  const flags = dv.getUint8(14);
+  return { seq: dv.getUint16(0, true), ax: i(2) / 1000, ay: i(4) / 1000, az: i(6) / 1000, gx: i(8) / 10, gy: i(10) / 10, gz: i(12) / 10,
+    tap: flags & 1, state: flags >> 1, event: dv.getUint8(15), roll: i(16) / 10, pitch: i(18) / 10 };
+}
+setInterval(() => { $('nRate').textContent = `${rateCount} Hz`; $('nLost').textContent = lost; rateCount = 0; }, 1000);
+
+// ---------- Bluetooth ----------
+let device = null, controlChar = null;
+async function connect() {
+  if (!navigator.bluetooth) { $('status').textContent = 'Trình duyệt này không có Web Bluetooth. Dùng Chrome hoặc Edge trên máy tính / Android.'; return; }
+  stopDemo();
+  try {
+    $('status').textContent = 'Chọn BandW-Sense trong hộp thoại…';
+    device = await navigator.bluetooth.requestDevice({ filters: [{ namePrefix: 'BandW' }, { services: [SERVICE] }], optionalServices: [SERVICE] });
+    device.addEventListener('gattserverdisconnected', () => { $('status').textContent = 'Mất kết nối'; $('calib').disabled = true; $('connect').disabled = false; log('Mất kết nối'); });
+    $('status').textContent = 'Đang kết nối…';
+    const server = await device.gatt.connect();
+    const svc = await server.getPrimaryService(SERVICE);
+    let raw;
+    try { raw = await svc.getCharacteristic(RAW); }
+    catch { $('status').textContent = 'Firmware chưa có kênh số liệu. Hãy nạp bản mới từ trang nạp (0.5.3 trở lên).'; device.gatt.disconnect(); return; }
+    // Subscribing to the command characteristic too: the band only passes double taps to the detector while a
+    // client listens for commands.
+    const gesture = await svc.getCharacteristic(GESTURE);
+    await gesture.startNotifications();
+    gesture.addEventListener('characteristicvaluechanged', (e) => log(`Lệnh gửi qua Bluetooth: ${new TextDecoder().decode(e.target.value)}`));
+    controlChar = await svc.getCharacteristic(CONTROL);
+    await controlChar.startNotifications();
+    controlChar.addEventListener('characteristicvaluechanged', (e) => { const t = new TextDecoder().decode(e.target.value).trim(); log(`Trạng thái: ${t}`); if (t === 'READY') $('status').textContent = '● Đã kết nối · Đã hiệu chuẩn'; if (t === 'CALIBRATING') $('status').textContent = 'Đang hiệu chuẩn: giữ tay yên 2 giây…'; });
+    await raw.startNotifications();
+    raw.addEventListener('characteristicvaluechanged', (e) => onSample(parse(e.target.value)));
+    $('status').textContent = `● Đã kết nối ${device.name || 'BandW'}`; $('calib').disabled = false; $('connect').disabled = true;
+    log('Đã kết nối, đang nhận số liệu');
+  } catch (err) {
+    if (err && err.name === 'NotFoundError') { $('status').textContent = 'Chưa chọn thiết bị'; return; }
+    $('status').textContent = `Lỗi: ${err.message || err}`; log(`Lỗi: ${err.message || err}`);
+  }
+}
+$('connect').addEventListener('click', connect);
+$('calib').addEventListener('click', async () => { try { await controlChar.writeValue(new TextEncoder().encode('CALIBRATE')); log('Đã gửi lệnh hiệu chuẩn'); } catch (e) { log(`Không gửi được lệnh hiệu chuẩn: ${e.message}`); } });
+
+// ---------- demo (no band): a scripted wrist ----------
+let demoTimer = null;
+function stopDemo() { if (demoTimer) { clearInterval(demoTimer); demoTimer = null; $('demo').textContent = 'Chạy thử (không cần vòng)'; } }
+$('demo').addEventListener('click', () => {
+  if (demoTimer) { stopDemo(); $('status').textContent = 'Chưa kết nối'; return; }
+  let k = 0, seq = 0;
+  const seg = [['rest', 60], ['WATER', 90], ['rest', 60], ['FOOD', 90], ['rest', 60], ['NO', 50], ['rest', 60], ['YES', 30], ['rest', 60], ['HELP', 80], ['rest', 60]];
+  const total = seg.reduce((a, s) => a + s[1], 0);
+  $('demo').textContent = 'Dừng chạy thử'; $('status').textContent = 'Đang chạy thử bằng dữ liệu giả lập';
+  demoTimer = setInterval(() => {
+    let t = k % total, name = 'rest', at = 0;
+    for (const [n, len] of seg) { if (t < len) { name = n; at = t; break; } t -= len; }
+    let roll = 0, pitch = 0, gy = 0, tap = 0, event = 0;
+    const ramp = (a) => Math.min(1, a / 10) * Math.min(1, (90 - a) / 10);
+    if (name === 'WATER') { roll = -40 * ramp(at); if (at === 30) event = 1; }
+    if (name === 'FOOD') { roll = 40 * ramp(at); if (at === 30) event = 2; }
+    if (name === 'NO') { gy = Math.sin(at / 2.6) * 230 * (at < 30 ? 1 : 0); roll = Math.cos(at / 2.6) * 18 * (at < 30 ? 1 : 0); if (at === 22) event = 3; }
+    if (name === 'YES') { if (at === 5) tap = 1; if (at === 13) event = 4; }
+    if (name === 'HELP') { const c = at % 30; pitch = at < 60 ? 55 * Math.max(0, Math.sin(Math.PI * c / 30)) : 0; if (at === 52) event = 5; }
+    roll += (Math.random() - 0.5) * 1.2; pitch += (Math.random() - 0.5) * 1.2; gy += (Math.random() - 0.5) * 6;
+    const r = roll / 57.3, p = pitch / 57.3;
+    onSample({ seq: seq++ % 65536, ax: Math.sin(r) * Math.cos(p), ay: Math.sin(p), az: Math.cos(r) * Math.cos(p), gx: 0, gy, gz: 0, tap, state: name === 'rest' ? 1 : 0, event, roll, pitch });
+    k++;
+  }, 20);
+});
+
+// ---------- recording ----------
+$('rec').addEventListener('click', () => {
+  recording = !recording;
+  if (recording) { rows = []; $('rec').innerHTML = '<span class="dot"></span>Dừng'; $('save').disabled = true; log(`Bắt đầu ghi (${$('label').value})`); }
+  else { $('rec').textContent = '● Ghi'; $('save').disabled = !rows.length; log(`Dừng ghi: ${rows.length} mẫu`); }
+});
+$('label').addEventListener('change', () => { if (recording) log(`Đổi nhãn: ${$('label').value}`); });
+setInterval(() => { $('recCount').textContent = `${rows.length} mẫu`; }, 250);
+$('save').addEventListener('click', () => {
+  const head = 't_ms,seq,label,ax_g,ay_g,az_g,gx_dps,gy_dps,gz_dps,tap,armed,cooling,tap_pending,tilt_candidate,in_dip,event,roll_deg,pitch_deg';
+  const blob = new Blob([head + '\n' + rows.map((r) => r.join(',')).join('\n') + '\n'], { type: 'text/csv' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `bandw-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.csv`; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+});
+
+// ---------- 3D ----------
+const canvas = $('scene');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+camera.position.set(3.1, 2.3, 1.2); camera.lookAt(0, -0.15, -1.55);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a9a80, 1.4));
+const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(3, 6, 4); scene.add(sun);
+const skin = new THREE.MeshStandardMaterial({ color: 0xedc6a3, roughness: 0.7 });
+const arm = new THREE.Group();
+const forearm = new THREE.Mesh(new THREE.CapsuleGeometry(0.42, 2.6, 8, 24), skin); forearm.rotation.x = Math.PI / 2; forearm.scale.set(1, 1, 0.78); forearm.position.z = -1.2; arm.add(forearm);
+const hand = new THREE.Mesh(new THREE.SphereGeometry(0.55, 24, 16), skin); hand.scale.set(1.05, 0.55, 1.2); hand.position.z = -3.0; arm.add(hand);
+const strap = new THREE.Mesh(new THREE.TorusGeometry(0.44, 0.09, 12, 40), new THREE.MeshStandardMaterial({ color: 0x215c47, roughness: 0.5 })); strap.scale.set(1, 0.8, 1); strap.position.z = -2.25; arm.add(strap);
+const pod = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.16, 0.5), new THREE.MeshStandardMaterial({ color: 0x1d4334 })); pod.position.set(0, 0.36, -2.25); arm.add(pod);
+const screen = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.02, 0.34), new THREE.MeshStandardMaterial({ color: 0xd5f28b, emissive: 0x6d8a2a, emissiveIntensity: 0.5 })); screen.position.set(0, 0.45, -2.25); arm.add(screen);
+// ghost = calibrated neutral pose
+const ghost = new THREE.Mesh(new THREE.CapsuleGeometry(0.42, 2.6, 4, 16), new THREE.MeshBasicMaterial({ color: 0x7a8a70, wireframe: true, transparent: true, opacity: 0.18 }));
+ghost.rotation.x = Math.PI / 2; ghost.scale.set(1, 1, 0.78); ghost.position.z = -1.2; scene.add(ghost);
+scene.add(arm);
+const grid = new THREE.GridHelper(8, 16, 0x9aa890, 0x9aa890); grid.position.y = -1.1; grid.material.transparent = true; grid.material.opacity = 0.25; scene.add(grid);
+let curRoll = 0, curPitch = 0;
+function resize() { const w = canvas.clientWidth, h = canvas.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(canvas); resize();
+
+// ---------- charts ----------
+function chart(id, key, range, lines, color) {
+  const c = $(id), ctx = c.getContext('2d');
+  return () => {
+    const dpr = Math.min(2, devicePixelRatio), w = c.clientWidth, h = c.clientHeight;
+    if (c.width !== w * dpr) { c.width = w * dpr; c.height = h * dpr; }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+    const y = (v) => h / 2 - (v / range) * (h / 2 - 8);
+    ctx.strokeStyle = css('--grid'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, y(0)); ctx.lineTo(w, y(0)); ctx.stroke();
+    ctx.font = '10px ui-monospace, Menlo, monospace'; ctx.fillStyle = css('--muted');
+    for (const [v, dash] of lines) {
+      ctx.strokeStyle = '#c33'; ctx.globalAlpha = dash ? 0.35 : 0.7; ctx.setLineDash(dash ? [3, 4] : []);
+      for (const s of [1, -1]) { ctx.beginPath(); ctx.moveTo(0, y(s * v)); ctx.lineTo(w, y(s * v)); ctx.stroke(); }
+      ctx.globalAlpha = 1; ctx.setLineDash([]); ctx.fillText(`±${v}`, 4, y(v) - 3);
+    }
+    if (!filled) return;
+    ctx.strokeStyle = css(color); ctx.lineWidth = 2; ctx.beginPath();
+    for (let i = 0; i < filled; i++) {
+      const idx = (head - filled + i + N) % N, X = (w * (N - filled + i)) / (N - 1);
+      const Y = y(Math.max(-range, Math.min(range, buf[key][idx])));
+      i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y);
+    }
+    ctx.stroke();
+    for (let i = 0; i < filled; i++) {
+      const idx = (head - filled + i + N) % N, X = (w * (N - filled + i)) / (N - 1);
+      if (buf.tap[idx]) { ctx.fillStyle = css('--yes'); ctx.beginPath(); ctx.moveTo(X, h - 4); ctx.lineTo(X - 5, h - 13); ctx.lineTo(X + 5, h - 13); ctx.fill(); }
+      const e = EVENTS[buf.ev[idx]];
+      if (e) { ctx.fillStyle = css(e[2]); ctx.fillRect(X - 1, 0, 2, h); ctx.font = 'bold 11px Inter, sans-serif'; ctx.fillText(e[0], Math.min(X + 4, w - 40), 13); }
+    }
+  };
+}
+const charts = [chart('cRoll', 'roll', 60, [[22, 0], [12, 1]], '--water'), chart('cPitch', 'pitch', 80, [[40, 0], [12, 1]], '--help'), chart('cGyro', 'gy', 300, [[100, 0]], '--no')];
+
+function frame() {
+  if (latest) {
+    curRoll += (latest.roll - curRoll) * 0.35; curPitch += (latest.pitch - curPitch) * 0.35;
+    const r0 = (v) => { const n = Math.round(v); return Object.is(n, -0) ? 0 : n; };
+    $('nRoll').textContent = `${r0(latest.roll)}°`; $('nPitch').textContent = `${r0(latest.pitch)}°`; $('nGy').textContent = r0(latest.gy);
+    document.querySelectorAll('#chips .chip[data-bit]').forEach((c) => c.classList.toggle('on', !!(latest.state & (1 << (c.dataset.bit - 1)))));
+  }
+  // roll: negative = left (WATER) -> left side down; pitch tips the hand end up/down about the elbow.
+  arm.rotation.set(THREE.MathUtils.degToRad(curPitch), 0, THREE.MathUtils.degToRad(-curRoll), 'XZY');
+  renderer.render(scene, camera);
+  charts.forEach((f) => f());
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+log('Mở trang bằng Chrome/Edge, bật Bluetooth, ngắt app BandW trên điện thoại (vòng chỉ cho 1 thiết bị kết nối) rồi bấm "Kết nối vòng tay".');
+</script>
+</body>
+</html>

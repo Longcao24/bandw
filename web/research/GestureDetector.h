@@ -83,6 +83,12 @@ class GestureDetector {
 public:
     // Why the last double tap did not become YES (nullptr = accepted or none). For the USB log only.
     const char* tapNote = nullptr;
+    // For the raw-data stream: bit0 armed, bit1 cooling, bit2 tap pending, bit3 tilt candidate, bit4 inside a dip.
+    uint8_t stateBits() const {
+        return (armed ? 1 : 0) | (cooling ? 2 : 0) | (tapPending ? 4 : 0) | (candidate ? 8 : 0) | (dipDir ? 16 : 0);
+    }
+    float rollDeg() const { return filtered; }
+    float pitchDeg() const { return filteredPitch; }
 
     void calibrate(float x, float y, float z, uint32_t now) {
         baseline = angle(x, z); filtered = 0; initialized = true;

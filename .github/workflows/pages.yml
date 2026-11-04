@@ -32,6 +32,7 @@ jobs:
           cp web/firmware/* site/firmware/
           cp -R web/research site/research
           cp -R web/apk site/apk
+          cp -R web/live site/live
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
