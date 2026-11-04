@@ -53,7 +53,7 @@ void onDisconnected(BLEDevice) { HCI.*pendingPkt() = 0; linkDropped = true; }
 // write only disables it.
 bool setupTap() {
     return imu.writeRegister(0x58, 0x8F) == IMU_SUCCESS   // TAP_CFG1: interrupts on, tap X/Y/Z, latched
-        && imu.writeRegister(0x59, 0x06) == IMU_SUCCESS   // TAP_THS_6D: 6 x 125 mg at +-4 g
+        && imu.writeRegister(0x59, 0x04) == IMU_SUCCESS   // TAP_THS_6D: 4 x 125 mg = 0.5 g at +-4 g (a finger tap through the strap is soft)
         && imu.writeRegister(0x5A, 0x7F) == IMU_SUCCESS   // INT_DUR2: gap <= 538 ms, quiet 29 ms, shock 58 ms
         && imu.writeRegister(0x5B, 0x80) == IMU_SUCCESS   // WAKE_UP_THS: single + double tap
         && imu.writeRegister(0x5E, 0x08) == IMU_SUCCESS;  // MD1_CFG: double tap on INT1
@@ -167,6 +167,7 @@ void loop() {
     }
     if (!subscribed) doubleTap = false; // No buffering or replay of gestures performed while disconnected.
     Gesture event = detector.update(x, y, z, gx, gy, gz, now, doubleTap);
+    if (doubleTap) log(detector.tapNote ? String("TAP ignored: ") + detector.tapNote : String("TAP"));
     if (!subscribed) return;
     const char* command = event == Gesture::Water ? "WATER" : event == Gesture::Food ? "FOOD" : event == Gesture::No ? "NO"
         : event == Gesture::Yes ? "YES" : event == Gesture::Help ? "HELP" : nullptr;

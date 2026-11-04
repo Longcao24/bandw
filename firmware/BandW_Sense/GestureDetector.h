@@ -10,7 +10,7 @@
 static const float TILT_SIGN = 1.0f;
 static const float TILT_ENTER_DEG = 22.0f;
 static const float TILT_EXIT_DEG = 12.0f;
-static const float PITCH_ENTER_DEG = 25.0f;
+static const float PITCH_ENTER_DEG = 40.0f;  // HELP dips must be big and deliberate (was 25)
 static const float PITCH_EXIT_DEG = 12.0f;
 static const float AXIS_MARGIN_DEG = 8.0f;  // the held axis must beat the other one by this much
 static const float MIN_PLANE_G = 0.4f;      // below this, X/Z cannot define roll (forearm near vertical)
@@ -18,11 +18,17 @@ static const float SHAKE_DPS = 100.0f;
 static const uint32_t HOLD_MS = 250;
 static const uint32_t DIP_MAX_MS = 700;      // one HELP dip: out past PITCH_ENTER_DEG and back, at most this long
 static const uint32_t HELP_WINDOW_MS = 2000; // both dips of a HELP must fit in this window
-static const uint32_t NEUTRAL_MS = 200;
-static const uint32_t COOLDOWN_MS = 650;
+// After any gesture: COOLDOWN_MS of nothing, then the wrist must rest still in neutral for NEUTRAL_MS before
+// the next one, so a long shake or a third dip cannot fire NO / HELP a second time.
+static const uint32_t NEUTRAL_MS = 500;
+static const uint32_t COOLDOWN_MS = 1200;
 static const uint32_t TAP_CONFIRM_MS = 150;
 static const uint32_t TAP_QUIET_BEFORE_MS = 300;
 static const float TAP_STILL_DPS = 50.0f;   // arm motion before a tap (e.g. setting the arm down) rejects YES
+// Only motion that lasts this many samples (100 ms) counts as moving the arm. The wrist rings for a few samples
+// after each finger tap, and with 2 samples the FIRST tap of the pair was vetoing the second (YES never fired).
+static const int TAP_STIR_SAMPLES = 5;
+static const int TAP_CANCEL_SAMPLES = 4;    // sustained >SHAKE_DPS after the tap (a shake) cancels a pending YES
 
 enum class Gesture { None, Water, Food, No, Yes, Help };
 
@@ -64,6 +70,10 @@ class GestureDetector {
     int candidate = 0, shakeSign = 0, shakePulses = 0, lastSign = 0;
     int stirRun = 0, fastRun = 0, dipDir = 0, pairDir = 0, dips = 0;
     bool cooling = false, tapPending = false;
+public:
+    // Why the last double tap did not become YES (nullptr = accepted or none). For the USB log only.
+    const char* tapNote = nullptr;
+private:
 
     static float angle(float x, float z) { return atan2f(x, z) * 57.2957795f; }
     static float wrap(float degrees) {
@@ -91,6 +101,7 @@ public:
 
     // doubleTap: the IMU's hardware double-tap flag for this sample (latched, read once per sample).
     Gesture update(float x, float y, float z, float gx, float gy, float gz, uint32_t now, bool doubleTap = false) {
+        tapNote = nullptr;
         if (!initialized) return Gesture::None;
         if (!isfinite(x) || !isfinite(y) || !isfinite(z) || !isfinite(gx) || !isfinite(gy) || !isfinite(gz)) {
             disarm(); return Gesture::None;
@@ -111,8 +122,8 @@ public:
         // never vetoes it, while lowering the arm onto a table (a set-down impact) does.
         stirRun = speed > TAP_STILL_DPS ? stirRun + 1 : 0;
         fastRun = speed > SHAKE_DPS ? fastRun + 1 : 0;
-        if (stirRun >= 2) lastStir = now;
-        if (fastRun >= 2) tapPending = false;
+        if (stirRun >= TAP_STIR_SAMPLES) lastStir = now;
+        if (fastRun >= TAP_CANCEL_SAMPLES && tapPending) { tapPending = false; tapNote = "cancelled by fast motion"; }
         if (cooling && uint32_t(now - lastEmission) >= COOLDOWN_MS) cooling = false;
         bool rest = level && fabsf(filtered) < TILT_EXIT_DEG && fabsf(filteredPitch) < PITCH_EXIT_DEG;
         if (!armed) {
@@ -121,6 +132,7 @@ public:
                 if (!neutralTiming) { neutralAt = now; neutralTiming = true; }
                 if (uint32_t(now - neutralAt) >= NEUTRAL_MS) armed = true;
             } else neutralTiming = false;
+            if (doubleTap) tapNote = cooling ? "cooldown after last gesture" : "wrist not resting in neutral yet";
             return Gesture::None;
         }
         // Three alternating fast rotations on Y within 900 ms = one wrist shake. A pulse needs two
@@ -137,12 +149,15 @@ public:
         }
         // Double tap = YES, only from a still neutral pose and confirmed after a quiet window,
         // so the jolts of a shake are never read as a tap (sustained fast rotation cancels it, see above).
-        if (doubleTap && !tapPending && rest && uint32_t(now - lastStir) >= TAP_QUIET_BEFORE_MS) {
-            tapPending = true; tapAt = now;
+        if (doubleTap && !tapPending) {
+            if (!rest) tapNote = "wrist tilted or forearm raised";
+            else if (uint32_t(now - lastStir) < TAP_QUIET_BEFORE_MS) tapNote = "arm was moving just before";
+            else { tapPending = true; tapAt = now; }
         }
         if (tapPending && uint32_t(now - tapAt) >= TAP_CONFIRM_MS) {
             tapPending = false;
             if (rest) return emit(Gesture::Yes, now);
+            tapNote = "wrist moved away from neutral";
         }
         // HELP = two quick forearm dips the same way (out past PITCH_ENTER_DEG and back under PITCH_EXIT_DEG,
         // each within DIP_MAX_MS, both within HELP_WINDOW_MS). A held pitch (hand to mouth, forearm lowered

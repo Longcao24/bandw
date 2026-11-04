@@ -23,7 +23,7 @@ struct Rig {
     void tap() { sample(0, 0, 1, 0, true); }
     // One quick dip: pitch out to `pitch` for `ms`, then back to neutral for `gap` ms.
     void dip(float pitch, int ms = 300, int gap = 300) { holdPitch(pitch, ms); holdPitch(0, gap); }
-    void helpDips(float pitch = 40) { dip(pitch); dip(pitch); }
+    void helpDips(float pitch = 55) { dip(pitch); dip(pitch); }
     // Natural posture change: ramp the pitch at `dps` then hold it.
     void rampPitch(float to, float dps, int holdMs) {
         float p = 0, step = dps * 0.02f * (to < 0 ? -1 : 1);
@@ -81,7 +81,7 @@ int main() {
         for(int i=0;i<5;++i) softShake.sample(0,phase%2 ? -110 : 110);
     assert(only(softShake, Gesture::No));
     softShake.hold(25,1000); assert(softShake.events.size()==1);
-    softShake.hold(0,500); softShake.hold(25,600);
+    softShake.hold(0,1200); softShake.hold(25,600);
     assert(softShake.events.size()==2 && softShake.events[1]==Gesture::Food);
 
     // Forearm near vertical (gravity on Y): atan2(x, z) is noise and must never emit.
@@ -102,17 +102,19 @@ int main() {
     // HELP: two quick forearm dips the same way, in either direction.
     Rig help; help.neutral(); help.helpDips(); assert(only(help, Gesture::Help));
     help.helpDips(); help.holdPitch(40, 3000); assert(help.events.size()==1); // must return to neutral first
-    Rig helpUp; helpUp.neutral(); helpUp.helpDips(-40); assert(only(helpUp, Gesture::Help));
-    Rig gentleHelp; gentleHelp.neutral(); gentleHelp.helpDips(30); assert(only(gentleHelp, Gesture::Help));
-    Rig oneDip; oneDip.neutral(); oneDip.dip(40); oneDip.neutral(); assert(oneDip.events.empty());
-    Rig swing; swing.neutral(); swing.dip(40); swing.dip(-40); swing.neutral(); assert(swing.events.empty()); // through neutral
-    Rig slowDips; slowDips.neutral(); slowDips.dip(40, 1000); slowDips.dip(40, 1000); slowDips.neutral();
+    Rig helpUp; helpUp.neutral(); helpUp.helpDips(-55); assert(only(helpUp, Gesture::Help));
+    // Small dips (under 40 deg) are everyday arm movement, not HELP.
+    for (float d : {25.0f, 30.0f, 35.0f, -35.0f}) { Rig small; small.neutral(); small.helpDips(d); small.neutral(); assert(small.events.empty()); }
+    Rig bigHelp; bigHelp.neutral(); bigHelp.helpDips(45); assert(only(bigHelp, Gesture::Help));
+    Rig oneDip; oneDip.neutral(); oneDip.dip(55); oneDip.neutral(); assert(oneDip.events.empty());
+    Rig swing; swing.neutral(); swing.dip(55); swing.dip(-55); swing.neutral(); assert(swing.events.empty()); // through neutral
+    Rig slowDips; slowDips.neutral(); slowDips.dip(55, 1000); slowDips.dip(55, 1000); slowDips.neutral();
     assert(slowDips.events.empty());
-    Rig farDips; farDips.neutral(); farDips.dip(40, 300, 1800); farDips.dip(40); farDips.neutral(); assert(farDips.events.empty());
+    Rig farDips; farDips.neutral(); farDips.dip(55, 300, 1800); farDips.dip(55); farDips.neutral(); assert(farDips.events.empty());
     Rig diagonal; diagonal.neutral(); diagonal.holdRP(30, 30, 300); diagonal.neutral(); diagonal.holdRP(30, 30, 300);
     diagonal.neutral(); assert(diagonal.events.empty());
     Rig rollDominant; rollDominant.neutral(); rollDominant.holdRP(-40, 15, 1600); assert(only(rollDominant, Gesture::Water));
-    Rig pitchDominant; pitchDominant.neutral(); for (int i=0;i<2;++i) { pitchDominant.holdRP(10, 40, 300); pitchDominant.holdRP(0, 0, 300); }
+    Rig pitchDominant; pitchDominant.neutral(); for (int i=0;i<2;++i) { pitchDominant.holdRP(10, 55, 300); pitchDominant.holdRP(0, 0, 300); }
     assert(only(pitchDominant, Gesture::Help));
     Rig helpRearm; helpRearm.neutral(); helpRearm.helpDips(); helpRearm.hold(-45, 1800);
     assert(only(helpRearm, Gesture::Help)); helpRearm.neutral(); helpRearm.hold(-45, 1600);
@@ -128,11 +130,11 @@ int main() {
     // A pitched neutral (calibrated with the forearm at 45 deg) still reaches HELP.
     Rig pitchedCal; pitchedCal.detector.calibrate(0, 0.7071f, 0.7071f, pitchedCal.now);
     for (int i=0;i<110;++i) pitchedCal.sample(0, 0, 1, 45);
-    for (int k=0;k<2;++k) { pitchedCal.holdPitch(75, 300); pitchedCal.holdPitch(45, 300); }
+    for (int k=0;k<2;++k) { pitchedCal.holdPitch(90, 300); pitchedCal.holdPitch(45, 300); }
     assert(only(pitchedCal, Gesture::Help));
     Rig pitchedCal2; pitchedCal2.detector.calibrate(0, 0.7071f, 0.7071f, pitchedCal2.now);
     for (int i=0;i<110;++i) pitchedCal2.sample(0, 0, 1, 45);
-    for (int k=0;k<2;++k) { pitchedCal2.holdPitch(15, 300); pitchedCal2.holdPitch(45, 300); }
+    for (int k=0;k<2;++k) { pitchedCal2.holdPitch(-5, 300); pitchedCal2.holdPitch(45, 300); }
     assert(only(pitchedCal2, Gesture::Help));
 
     // YES: hardware double tap, confirmed from neutral.
@@ -141,14 +143,14 @@ int main() {
     Rig yesTilted; yesTilted.neutral(); yesTilted.hold(18, 600); yesTilted.sample(18, 0, 1, 0, true);
     yesTilted.hold(18, 300); assert(yesTilted.events.empty());
     Rig yesShake; yesShake.neutral(); shake(yesShake, 1); yesShake.hold(0, 500); assert(only(yesShake, Gesture::No));
-    Rig tapRotate; tapRotate.neutral(); tapRotate.tap(); for (int i=0;i<3;++i) tapRotate.sample(0, 150);
+    Rig tapRotate; tapRotate.neutral(); tapRotate.tap(); for (int i=0;i<5;++i) tapRotate.sample(0, 150);
     tapRotate.hold(0, 300); assert(tapRotate.events.empty());
-    Rig rotateTap; rotateTap.neutral(); rotateTap.sample(0,150); rotateTap.sample(0,150); rotateTap.hold(0,100);
+    Rig rotateTap; rotateTap.neutral(); for (int i=0;i<6;++i) rotateTap.sample(0,150); rotateTap.hold(0,100);
     rotateTap.tap(); rotateTap.hold(0, 300); assert(rotateTap.events.empty());
-    rotateTap.sample(0,150); rotateTap.sample(0,150); rotateTap.hold(0,400);
+    rotateTap.hold(0,1200); for (int i=0;i<6;++i) rotateTap.sample(0,150); rotateTap.hold(0,400);
     rotateTap.tap(); rotateTap.hold(0, 300); assert(only(rotateTap, Gesture::Yes));
     Rig yesCooldown; yesCooldown.neutral(); yesCooldown.tap(); yesCooldown.hold(0, 180); yesCooldown.tap();
-    yesCooldown.hold(0, 1000); assert(only(yesCooldown, Gesture::Yes));
+    yesCooldown.hold(0, 1800); assert(only(yesCooldown, Gesture::Yes));
     yesCooldown.tap(); yesCooldown.hold(0, 300); assert(yesCooldown.events.size()==2 && yesCooldown.events[1]==Gesture::Yes);
     Rig tapSpike; tapSpike.neutral(); tapSpike.tap(); tapSpike.sample(0,0,2.5f); tapSpike.sample(0,0,2.5f);
     tapSpike.hold(0, 1500); assert(only(tapSpike, Gesture::Yes));
@@ -160,6 +162,21 @@ int main() {
     Rig tapJolt; tapJolt.neutral(); tapJolt.sample(0, 109, 1, 0, true); tapJolt.hold(0, 300); assert(only(tapJolt, Gesture::Yes));
     Rig firstJolt; firstJolt.neutral(); firstJolt.sample(0, 113); firstJolt.hold(0, 220); firstJolt.tap(); firstJolt.hold(0, 300);
     assert(only(firstJolt, Gesture::Yes));
+    // Real finger taps: the wrist rings for a few samples after EACH tap (here 3 x 80 dps after the first tap,
+    // 3 x 120 dps after the second). That ringing must not veto or cancel YES (it did with a 2-sample rule).
+    Rig ringing; ringing.neutral();
+    for (int i=0;i<3;++i) ringing.sample(0, 80);
+    ringing.hold(0, 160); ringing.tap();
+    for (int i=0;i<3;++i) ringing.sample(0, 120);
+    ringing.hold(0, 300); assert(only(ringing, Gesture::Yes));
+    // No repeats: a long shake is ONE NO, three dips are ONE HELP, and a tap during the cooldown is ignored.
+    Rig longShake; longShake.neutral();
+    for (int phase=0; phase<8; ++phase) for (int i=0;i<5;++i) longShake.sample(0, phase%2 ? -220 : 220);
+    longShake.hold(0, 300); assert(only(longShake, Gesture::No));
+    Rig threeDips; threeDips.neutral(); threeDips.helpDips(); threeDips.dip(55); threeDips.dip(55); threeDips.hold(0, 300);
+    assert(only(threeDips, Gesture::Help));
+    Rig helpThenTap; helpThenTap.neutral(); helpThenTap.helpDips(); helpThenTap.hold(0, 400); helpThenTap.tap();
+    helpThenTap.hold(0, 300); assert(only(helpThenTap, Gesture::Help));
     // Lowering the arm onto a table (sustained motion right before the impact) is not YES.
     Rig setDown; setDown.neutral(); for (int i=0;i<10;++i) setDown.sample(0, 60); setDown.tap(); setDown.hold(0, 300);
     assert(setDown.events.empty());
