@@ -243,6 +243,10 @@ a.exam-mode:hover { border-color: var(--c-border-strong); box-shadow: var(--shad
 .def-points label { cursor: pointer; flex: 1; }
 .def-points.readonly li.on { border-color: var(--c-success-line); background: var(--c-success-bg); }
 .def-score { font-weight: var(--w-semibold); font-size: 16px; }
+.def-points.readonly input { opacity: 1; cursor: default; }
+.def-points.readonly label { cursor: default; }
+.def-ai-note { font-size: 14px; color: var(--c-muted); margin: 4px 0 12px; }
+.def-ai-note:empty { display: none; }
 .def-follow-btn { margin-top: 8px; }
 .def-follow-btn .ic { color: var(--c-streak); }
 .def-follow-t { display: inline-block; font-family: var(--mono); font-weight: var(--w-medium); margin-right: 10px; }

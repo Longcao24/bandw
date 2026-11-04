@@ -53,11 +53,11 @@ export function renderResult(res, { best = null, improvedNow = false } = {}) {
 /**
  * createGrader(question, opts)
  *   question: { id, keyPoints[] }  (a flashcard step or a defense-index item)
- *   opts: { store, text, maxLength, onText(v), onResult(res, saved), autofocus, heading, compact, placeholder }
+ *   opts: { store, text, maxLength, onText(v), onResult(res, saved), onBusy(bool), onError(kind), autofocus, heading, compact, placeholder }
  * → { el, getText(), setText(v), focus(), grade(), destroy() }
  */
 export function createGrader(question, opts = {}) {
-  const { store = null, onText, onResult, heading = null, compact = false } = opts;
+  const { store = null, onText, onResult, onBusy, onError, heading = null, compact = false } = opts;
   const maxLength = Math.min(opts.maxLength || MAX_CHARS, MAX_CHARS);
   const keyPoints = Array.isArray(question.keyPoints) ? question.keyPoints : [];
   const uid = `gr-${++seq}`;
@@ -95,6 +95,7 @@ export function createGrader(question, opts = {}) {
     btn.disabled = b;
     root.setAttribute('aria-busy', String(b));
     btn.lastChild.textContent = b ? 'Đang chấm…' : 'Chấm bằng AI';
+    if (onBusy) onBusy(b);
   }
   function showError(msg) {
     status.className = 'gr-status err';
@@ -106,7 +107,7 @@ export function createGrader(question, opts = {}) {
     if (mic) mic.stop();
     const answer = ta.value;
     const bad = checkAnswer(answer);
-    if (bad) { showError(errorMessage(bad)); if (bad === 'short') ta.focus(); return; }
+    if (bad) { showError(errorMessage(bad)); if (onError) onError(bad); if (bad === 'short') ta.focus(); return; }
     ctl = new AbortController();
     setBusy(true);
     status.className = 'gr-status loading';
@@ -127,6 +128,7 @@ export function createGrader(question, opts = {}) {
     } catch (e) {
       if (destroyed || (e instanceof GradeError && e.kind === 'aborted')) return;
       showError(e instanceof GradeError ? e.message : errorMessage('bad'));
+      if (onError) onError(e instanceof GradeError ? e.kind : 'bad');
     } finally {
       ctl = null;
       if (!destroyed) setBusy(false);

@@ -1,8 +1,9 @@
 // Phản biện thử: a simulated judge panel asks 8 open questions. Per question: countdown (60/90 s) while the
-// learner answers aloud (optional notes) → model answer + key-point checklist (self-tick = score) →
-// optional "hỏi xoáy" follow-up. Resumable after a refresh; summary synced like any exam attempt.
-// Optional AI grading of the typed/dictated answer (grading/panel.js): the AI score is kept per question
-// (a.ans[id].ai, tenths) and in progress.ai; key points the AI found are ticked (merged into the self-score).
+// learner answers aloud while the mic (or typing) records it → the answer is graded by AI automatically
+// (grading/panel.js) and the key points the AI found ARE the score (a.ans[id].k; AI score a.ans[id].ai in
+// tenths, graded text a.ans[id].ag) → model answer → optional "hỏi xoáy" follow-up. Self-ticking is only
+// unlocked (a.ans[id].self) when the grading service fails, so the exam never gets stuck.
+// Resumable after a refresh; summary synced like any exam attempt.
 import { el, svgNode } from '../util.js';
 import { inline, blocks } from '../render/markdown.js';
 import { MODES, generateDefense, newAttemptId, followUpFor } from '../exam/generate.js';
@@ -49,9 +50,9 @@ export function render(root, _params, ctx) {
       el('h1#xd-h', { tabindex: '-1' }, 'Phản biện thử'),
       el('p.lead', null, `Hội đồng ảo hỏi ${MODES.defense.size} câu, trộn từ các chương và từ ngân hàng câu hỏi riêng của đề thi.`),
       el('ul.exam-rules', null,
-        rule('mic', 'Trả lời THÀNH TIẾNG như trước hội đồng thật. Có thể gõ vài ý ghi chú.'),
+        rule('mic', 'Trả lời THÀNH TIẾNG như trước hội đồng thật, bật micro để máy ghi lại (hoặc gõ câu trả lời).'),
         rule('clock', 'Mỗi câu có đồng hồ đếm ngược. Hết giờ thì câu trả lời mẫu hiện ra.'),
-        rule('list', 'Đọc câu trả lời mẫu rồi tự đánh dấu những ý chính em đã nói được: đó là điểm của em.'),
+        rule('list', 'Trả lời xong (hoặc hết giờ), AI tự chấm và đánh dấu các ý chính em nói được: đó là điểm của em.'),
         rule('flame', 'Muốn khó hơn? Bấm "Giám khảo hỏi xoáy" để nhận thêm một câu hỏi bám đuổi.')),
       el('div.def-time', { role: 'group', 'aria-label': 'Thời gian mỗi câu' }, el('span', null, 'Thời gian mỗi câu:'), timeChips),
       other ? el('p.exam-conflict', { role: 'note' }, 'Em đang có một bài làm dở (', el('a', { href: modeHref(other.mode, other.unitId) }, modeName(course, other)), '). Vào phòng phản biện sẽ bỏ bài đó.') : null,
@@ -110,7 +111,7 @@ export function render(root, _params, ctx) {
         micRef = micButton(notes);
         area.replaceChildren(el('div.def-answer', null, ring,
           el('div.def-answer-side', null, el('p.def-say', null, icon('mic', 18), el('span', null, 'Hãy trả lời thành tiếng: ý chính → dẫn chứng (số liệu, dòng code) → giới hạn.')), notes,
-            micRef ? el('div.def-mic', null, micRef.el, el('span.ex-sub', null, 'Bật micro để máy ghi lại lời em nói, rồi cho AI chấm ở bước sau.')) : null,
+            micRef ? el('div.def-mic', null, micRef.el, el('span.ex-sub', null, 'Bật micro để máy ghi lại lời em nói. Trả lời xong, AI tự chấm.')) : null,
             el('div.def-actions', null, done))));
         const paintRing = () => {
           const left = Math.ceil((a.qEnd - Date.now()) / 1000);
@@ -133,7 +134,13 @@ export function render(root, _params, ctx) {
       function reviewPhase() {
         const kp = step.keyPoints || [];
         const score = el('p.def-score', { 'aria-live': 'polite' });
-        const paintScore = () => { score.textContent = `Em nói được ${r.k.length}/${kp.length} ý chính` + (Number.isInteger(r.ai) ? ` · AI chấm ${fmtScore(r.ai / 10)}/10` : ''); };
+        const aiNote = el('p.def-ai-note', { role: 'status' });
+        // The AI grade is the score: its covered key points are the ticks. Self-ticking only opens up when the
+        // grading service itself fails (busy, offline, rate-limited), so a broken AI never blocks the exam.
+        let selfMode = !!r.self;
+        const paintScore = () => {
+          score.textContent = `Em nói được ${r.k.length}/${kp.length} ý chính` + (Number.isInteger(r.ai) ? ` · AI chấm ${fmtScore(r.ai / 10)}/10` : '');
+        };
         const boxes = [];
         const checks = el('ul.def-points', { 'aria-label': 'Những ý chính em đã nói được' }, kp.map((k, j) => {
           const id = `def-${a.id}-${i}-${j}`;
@@ -141,39 +148,51 @@ export function render(root, _params, ctx) {
           boxes.push(cb);
           cb.checked = r.k.includes(j);
           cb.addEventListener('change', () => {
+            if (!selfMode) { cb.checked = r.k.includes(j); return; }
             r.k = kp.map((_, x) => x).filter((x) => (x === j ? cb.checked : r.k.includes(x)));
             persist(); paintScore();
           });
           return el('li', null, cb, el('label', { for: id, html: inline(k) }));
         }));
-        paintScore();
-        // ---- optional AI grading of the typed / dictated answer ----
-        const notesView = r.t ? el('div.rv-notes', null, el('strong', null, 'Ghi chú của em: '), r.t) : null;
-        const aiBox = el('div.def-ai', { hidden: true });
-        const aiBtn = el('button.btn.def-ai-btn', { type: 'button', 'aria-expanded': 'false' }, icon('sparkles', 18),
-          Number.isInteger(r.ai) ? `Chấm lại bằng AI (lần trước ${fmtScore(r.ai / 10)}/10)` : 'Chấm câu trả lời bằng AI (không bắt buộc)');
-        aiBtn.addEventListener('click', () => {
-          const open = aiBox.hidden;
-          aiBox.hidden = !open; aiBtn.setAttribute('aria-expanded', String(open));
-          if (notesView) { notesView.hidden = open; notesView.lastChild.textContent = r.t || ''; }
-          if (open && !graderRef) {
-            graderRef = createGrader({ id: q.id, keyPoints: kp }, {
-              store, text: r.t || '', maxLength: 1000, compact: true,
-              heading: 'Câu trả lời của em (sửa lại hoặc đọc thêm cho đủ ý, rồi bấm chấm)',
-              onText: (v) => { r.t = v.slice(0, 1000); persist(); },
-              onResult: (res) => {
-                r.ai = Math.round(res.score * 10);
-                r.ak = res.covered.slice(0, kp.length);
-                const merged = new Set([...r.k, ...r.ak]);
-                r.k = kp.map((_, x) => x).filter((x) => merged.has(x));
-                boxes.forEach((cb, x) => { cb.checked = merged.has(x); });
-                persist(); paintScore();
-              },
-            });
-            aiBox.append(graderRef.el, el('p.ex-sub', null, 'Ý chính AI thấy em nói được sẽ tự được đánh dấu bên dưới. Em vẫn có thể sửa lại.'));
-          }
-          if (open) graderRef.focus();
+        const checksLabel = el('div.fc-label');
+        const paintChecks = () => {
+          boxes.forEach((cb, x) => { cb.checked = r.k.includes(x); cb.disabled = !selfMode; });
+          checks.classList.toggle('readonly', !selfMode);
+          checks.hidden = !selfMode; checksLabel.hidden = !selfMode;
+          checksLabel.textContent = selfMode ? 'Máy chấm đang lỗi: em tự đánh dấu những ý đã nói được' : 'Ý chính AI thấy em nói được (đây là điểm của em)';
+        };
+        const noteFor = (kind) => {
+          if (kind === 'short') return 'Em chưa ghi lại câu trả lời (hoặc quá ngắn) nên AI chưa chấm được. Gõ hoặc bật micro đọc lại câu trả lời ở trên rồi bấm "Chấm bằng AI".';
+          if (kind === 'long') return 'Câu trả lời dài quá, em rút gọn lại rồi bấm "Chấm bằng AI".';
+          return 'Máy chấm AI đang lỗi nên em tự đánh dấu các ý chính bên dưới. Có mạng lại thì bấm "Chấm bằng AI" để AI chấm.';
+        };
+        const next = el('button.btn.primary.lg', { type: 'button' }, i === N - 1 ? 'Xem kết quả' : 'Câu tiếp');
+        graderRef = createGrader({ id: q.id, keyPoints: kp }, {
+          store, text: r.t || '', maxLength: 1000, compact: true,
+          heading: 'Câu trả lời của em (AI tự chấm; muốn sửa thì sửa rồi bấm chấm lại)',
+          onText: (v) => { r.t = v.slice(0, 1000); persist(); },
+          onBusy: (b) => {
+            next.disabled = b;
+            if (b) aiNote.textContent = 'AI đang chấm, đợi chút rồi mới sang câu tiếp nhé.';
+          },
+          onError: (kind) => {
+            aiNote.textContent = noteFor(kind);
+            if (kind !== 'short' && kind !== 'long' && kind !== 'aborted') { selfMode = true; r.self = 1; persist(); paintChecks(); }
+          },
+          onResult: (res) => {
+            r.ai = Math.round(res.score * 10);
+            r.ak = res.covered.slice(0, kp.length);
+            r.k = kp.map((_, x) => x).filter((x) => r.ak.includes(x));
+            r.ag = graderRef ? graderRef.getText() : r.t;
+            selfMode = false; delete r.self;
+            aiNote.textContent = '';
+            persist(); paintChecks(); paintScore();
+          },
         });
+        paintChecks();
+        paintScore();
+        // Grade automatically on entering review, unless this exact text was already graded (e.g. after a refresh).
+        if (!(Number.isInteger(r.ai) && r.ag === r.t)) queueMicrotask(() => { if (graderRef) graderRef.grade(); });
         const fu = followUpFor(step, data.followUps, data.genericFollowUp);
         const fuBox = el('div.def-follow');
         const fuBtn = fu ? el('button.btn.def-follow-btn', { type: 'button', onclick: () => followUp() }, icon('flame', 18), 'Giám khảo hỏi xoáy') : null;
@@ -192,19 +211,17 @@ export function render(root, _params, ctx) {
           fuBox.querySelector('.def-fq').setAttribute('tabindex', '-1'); fuBox.querySelector('.def-fq').focus();
         }
         const last = i === N - 1;
-        const next = el('button.btn.primary.lg', { type: 'button', onclick: () => {
+        next.addEventListener('click', () => {
           stopTimer();
           if (last) { finish(); return; }
           a.cur += 1; a.phase = 'answer'; a.timeUp = false; a.qEnd = Date.now() + a.secs * 1000; persist();
           show(); window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
-        } }, last ? 'Xem kết quả' : 'Câu tiếp');
+        });
         area.replaceChildren(...[
           a.timeUp ? el('p.def-timeup', { role: 'status' }, 'Hết giờ! Ở phòng thi thật, giám khảo sẽ ngắt lời ở đây. Tập nói gọn hơn nhé.') : null,
-          notesView,
-          aiBtn, aiBox,
+          graderRef.el,
+          checksLabel, checks, score, aiNote,
           el('div.fc-answer', { tabindex: '-1' }, el('div.fc-label', null, 'Câu trả lời mẫu'), el('div', { html: blocks(step.modelAnswer) })),
-          el('div.fc-label', null, 'Em đã nói được những ý nào? (tự đánh dấu, đây là điểm của em)'),
-          checks, score,
           step.explanation ? el('p.ex-sub.fc-tip', null, icon('lightbulb', 16), el('span', { html: inline(step.explanation) })) : null,
           fuBtn, fuBox,
           el('div.def-actions', null, next)].filter(Boolean));
