@@ -9,6 +9,12 @@
 BLEService gestureService("c91b0001-7d7a-4f8c-9d29-6e44c786a321");
 BLEStringCharacteristic gestureCharacteristic("c91b0002-7d7a-4f8c-9d29-6e44c786a321", BLERead | BLENotify, 8);
 BLEStringCharacteristic controlCharacteristic("c91b0003-7d7a-4f8c-9d29-6e44c786a321", BLERead | BLEWrite | BLENotify, 20);
+// Raw-data stream for tuning (recorded on a computer). Sends one 20-byte sample per 20 ms ONLY while a client
+// is subscribed; the Android app never subscribes, so normal use is unchanged.
+// Layout (little endian): u16 seq · i16 ax,ay,az (mg) · i16 gx,gy,gz (0.1 dps) · u8 flags (bit0 hardware double
+// tap) · u8 event (0 none, 1 WATER, 2 FOOD, 3 NO, 4 YES, 5 HELP) · i16 roll, pitch (0.1 deg, filtered, vs calibration)
+BLECharacteristic rawCharacteristic("c91b0004-7d7a-4f8c-9d29-6e44c786a321", BLENotify, 20, true);
+uint16_t rawSeq = 0;
 LSM6DS3 imu(I2C_MODE, 0x6A);
 GestureDetector detector;
 Calibrator calibrator;
@@ -89,6 +95,7 @@ void setup() {
     BLE.setAdvertisedService(gestureService);
     gestureService.addCharacteristic(gestureCharacteristic);
     gestureService.addCharacteristic(controlCharacteristic);
+    gestureService.addCharacteristic(rawCharacteristic);
     BLE.addService(gestureService);
     BLE.setEventHandler(BLEDisconnected, onDisconnected);
     gestureCharacteristic.writeValue("");
@@ -168,6 +175,18 @@ void loop() {
     if (!subscribed) doubleTap = false; // No buffering or replay of gestures performed while disconnected.
     Gesture event = detector.update(x, y, z, gx, gy, gz, now, doubleTap);
     if (doubleTap) log(detector.tapNote ? String("TAP ignored: ") + detector.tapNote : String("TAP"));
+    if (connected && rawCharacteristic.subscribed()) {
+        uint8_t p[20];
+        auto put16 = [&](int at, float v) { int32_t i = lroundf(v); if (i > 32767) i = 32767; if (i < -32768) i = -32768;
+            p[at] = uint8_t(i & 0xFF); p[at + 1] = uint8_t((i >> 8) & 0xFF); };
+        p[0] = rawSeq & 0xFF; p[1] = rawSeq >> 8; ++rawSeq;
+        put16(2, x * 1000); put16(4, y * 1000); put16(6, z * 1000);
+        put16(8, gx * 10); put16(10, gy * 10); put16(12, gz * 10);
+        p[14] = (doubleTap ? 1 : 0) | uint8_t(detector.stateBits() << 1);
+        p[15] = uint8_t(event);
+        put16(16, detector.rollDeg() * 10); put16(18, detector.pitchDeg() * 10);
+        rawCharacteristic.writeValue(p, sizeof p);
+    }
     if (!subscribed) return;
     const char* command = event == Gesture::Water ? "WATER" : event == Gesture::Food ? "FOOD" : event == Gesture::No ? "NO"
         : event == Gesture::Yes ? "YES" : event == Gesture::Help ? "HELP" : nullptr;
