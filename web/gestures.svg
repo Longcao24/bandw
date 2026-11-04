@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1584" height="830" viewBox="0 0 1584 830" font-family="-apple-system, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif">
+<defs>
+<marker id="h2F6EA5" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#2F6EA5"/></marker>
+<marker id="h9A7410" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#9A7410"/></marker>
+<marker id="hB4533A" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#B4533A"/></marker>
+<marker id="h3C7D3A" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#3C7D3A"/></marker>
+<marker id="hB0362A" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#B0362A"/></marker>
+<filter id="sh" x="-10%" y="-10%" width="120%" height="125%"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#29432a" flood-opacity=".10"/></filter></defs>
+<rect width="1584" height="830" fill="#F5F6F0"/>
+<text x="40" y="70" font-size="15" font-weight="700" letter-spacing="3" fill="#587454">BANDW · FIRMWARE v0.5.0</text>
+<text x="40" y="122" font-size="44" font-weight="800" letter-spacing="-1.5" fill="#243b31">5 cử chỉ, 5 lời nói</text>
+<text x="1544" y="122" font-size="17" fill="#61705f" text-anchor="end">Đeo vòng trên cổ tay, mặt vòng hướng lên · Hiệu chuẩn trước khi dùng</text>
+<g transform="translate(40 168)">
+<rect width="288" height="600" rx="24" fill="#fff" stroke="#dce2d4" filter="url(#sh)"/>
+<path d="M24 0H264A24 24 0 0 1 288 24V330H0V24A24 24 0 0 1 24 0Z" fill="#E4EFF9"/>
+<text x="22" y="38" font-size="14" font-weight="700" fill="#2F6EA5" opacity=".8">01</text>
+<g transform="translate(144.0 182)"><line x1="-125" y1="0" x2="125" y2="0" stroke="#00000022" stroke-width="2" stroke-dasharray="3 7"/><g transform="" fill="none" stroke="#00000033" stroke-width="2" stroke-dasharray="6 6"><rect x="-80" y="-28" width="160" height="56" rx="28"/><rect x="-46" y="-42" width="92" height="22" rx="7"/></g><g transform="rotate(-25)"><rect x="-80" y="-28" width="160" height="56" rx="28" fill="#EDC6A3" stroke="#B9835C" stroke-width="2"/><rect x="-50" y="-30" width="100" height="60" rx="6" fill="#1d4f3c" opacity=".08"/><rect x="-46" y="-44" width="92" height="24" rx="7" fill="#215C47"/><rect x="-31" y="-40" width="62" height="15" rx="4" fill="#D5F28B"/></g><path d="M-19.4 -110.3 A112 112 0 0 0 -98.9 -52.6" fill="none" stroke="#2F6EA5" stroke-width="5" stroke-linecap="round" marker-end="url(#h2F6EA5)"/></g>
+<text x="144.0" y="316" font-size="12" fill="#00000066" text-anchor="middle">nhìn từ phía sau bàn tay</text>
+<text x="24" y="390" font-size="38" font-weight="800" letter-spacing="-1" fill="#243b31">Nước</text>
+<rect x="189" y="364" width="75" height="30" rx="15" fill="#2F6EA5"/><text x="226.5" y="384" font-size="13" font-weight="800" letter-spacing="1" fill="#fff" text-anchor="middle" font-family="ui-monospace, Menlo, monospace">WATER</text>
+<text x="24" y="432" font-size="19" font-style="italic" fill="#2F6EA5">“Tôi muốn uống nước.”</text>
+<line x1="24" y1="458" x2="264" y2="458" stroke="#e6e9e1"/>
+<text x="24" y="474" font-size="12" font-weight="700" letter-spacing="1.5" fill="#7e936c">CÁCH LÀM</text>
+<text x="24" y="506" font-size="18" fill="#304a37">Nghiêng cổ tay sang TRÁI</text>
+<text x="24" y="534" font-size="18" fill="#304a37">(quá 22°) rồi giữ lại một</text>
+<text x="24" y="562" font-size="18" fill="#304a37">chút.</text>
+</g>
+<g transform="translate(344 168)">
+<rect width="288" height="600" rx="24" fill="#fff" stroke="#dce2d4" filter="url(#sh)"/>
+<path d="M24 0H264A24 24 0 0 1 288 24V330H0V24A24 24 0 0 1 24 0Z" fill="#F6EFCF"/>
+<text x="22" y="38" font-size="14" font-weight="700" fill="#9A7410" opacity=".8">02</text>
+<g transform="translate(144.0 182)"><line x1="-125" y1="0" x2="125" y2="0" stroke="#00000022" stroke-width="2" stroke-dasharray="3 7"/><g transform="" fill="none" stroke="#00000033" stroke-width="2" stroke-dasharray="6 6"><rect x="-80" y="-28" width="160" height="56" rx="28"/><rect x="-46" y="-42" width="92" height="22" rx="7"/></g><g transform="rotate(25)"><rect x="-80" y="-28" width="160" height="56" rx="28" fill="#EDC6A3" stroke="#B9835C" stroke-width="2"/><rect x="-50" y="-30" width="100" height="60" rx="6" fill="#1d4f3c" opacity=".08"/><rect x="-46" y="-44" width="92" height="24" rx="7" fill="#215C47"/><rect x="-31" y="-40" width="62" height="15" rx="4" fill="#D5F28B"/></g><path d="M19.4 -110.3 A112 112 0 0 1 98.9 -52.6" fill="none" stroke="#9A7410" stroke-width="5" stroke-linecap="round" marker-end="url(#h9A7410)"/></g>
+<text x="144.0" y="316" font-size="12" fill="#00000066" text-anchor="middle">nhìn từ phía sau bàn tay</text>
+<text x="24" y="390" font-size="38" font-weight="800" letter-spacing="-1" fill="#243b31">Ăn</text>
+<rect x="200" y="364" width="64" height="30" rx="15" fill="#9A7410"/><text x="232.0" y="384" font-size="13" font-weight="800" letter-spacing="1" fill="#fff" text-anchor="middle" font-family="ui-monospace, Menlo, monospace">FOOD</text>
+<text x="24" y="432" font-size="19" font-style="italic" fill="#9A7410">“Tôi muốn ăn.”</text>
+<line x1="24" y1="458" x2="264" y2="458" stroke="#e6e9e1"/>
+<text x="24" y="474" font-size="12" font-weight="700" letter-spacing="1.5" fill="#7e936c">CÁCH LÀM</text>
+<text x="24" y="506" font-size="18" fill="#304a37">Nghiêng cổ tay sang PHẢI</text>
+<text x="24" y="534" font-size="18" fill="#304a37">(quá 22°) rồi giữ lại một</text>
+<text x="24" y="562" font-size="18" fill="#304a37">chút.</text>
+</g>
+<g transform="translate(648 168)">
+<rect width="288" height="600" rx="24" fill="#fff" stroke="#dce2d4" filter="url(#sh)"/>
+<path d="M24 0H264A24 24 0 0 1 288 24V330H0V24A24 24 0 0 1 24 0Z" fill="#FCEAE5"/>
+<text x="22" y="38" font-size="14" font-weight="700" fill="#B4533A" opacity=".8">03</text>
+<g transform="translate(144.0 182)"><line x1="-125" y1="0" x2="125" y2="0" stroke="#00000022" stroke-width="2" stroke-dasharray="3 7"/><g transform="rotate(-16)" fill="none" stroke="#00000033" stroke-width="2" stroke-dasharray="6 6"><rect x="-80" y="-28" width="160" height="56" rx="28"/><rect x="-46" y="-42" width="92" height="22" rx="7"/></g><g transform="rotate(16)" fill="none" stroke="#00000033" stroke-width="2" stroke-dasharray="6 6"><rect x="-80" y="-28" width="160" height="56" rx="28"/><rect x="-46" y="-42" width="92" height="22" rx="7"/></g><g transform=""><rect x="-80" y="-28" width="160" height="56" rx="28" fill="#EDC6A3" stroke="#B9835C" stroke-width="2"/><rect x="-50" y="-30" width="100" height="60" rx="6" fill="#1d4f3c" opacity=".08"/><rect x="-46" y="-44" width="92" height="24" rx="7" fill="#215C47"/><rect x="-31" y="-40" width="62" height="15" rx="4" fill="#D5F28B"/></g><path d="M-97.0 -56.0 A112 112 0 0 1 97.0 -56.0" fill="none" stroke="#B4533A" stroke-width="5" stroke-linecap="round" marker-end="url(#hB4533A)" marker-start="url(#hB4533A)"/><g transform="translate(0 72)"><rect x="-30" y="-19" width="60" height="38" rx="19" fill="#B4533A"/><text y="7" text-anchor="middle" font-size="20" font-weight="800" fill="#fff">×3</text></g></g>
+<text x="144.0" y="316" font-size="12" fill="#00000066" text-anchor="middle">nhìn từ phía sau bàn tay</text>
+<text x="24" y="390" font-size="38" font-weight="800" letter-spacing="-1" fill="#243b31">Không</text>
+<rect x="222" y="364" width="42" height="30" rx="15" fill="#B4533A"/><text x="243.0" y="384" font-size="13" font-weight="800" letter-spacing="1" fill="#fff" text-anchor="middle" font-family="ui-monospace, Menlo, monospace">NO</text>
+<text x="24" y="432" font-size="19" font-style="italic" fill="#B4533A">“Không.”</text>
+<line x1="24" y1="458" x2="264" y2="458" stroke="#e6e9e1"/>
+<text x="24" y="474" font-size="12" font-weight="700" letter-spacing="1.5" fill="#7e936c">CÁCH LÀM</text>
+<text x="24" y="506" font-size="18" fill="#304a37">Lắc cổ tay qua lại thật</text>
+<text x="24" y="534" font-size="18" fill="#304a37">nhanh, 3 lần trong khoảng 1</text>
+<text x="24" y="562" font-size="18" fill="#304a37">giây.</text>
+</g>
+<g transform="translate(952 168)">
+<rect width="288" height="600" rx="24" fill="#fff" stroke="#dce2d4" filter="url(#sh)"/>
+<path d="M24 0H264A24 24 0 0 1 288 24V330H0V24A24 24 0 0 1 24 0Z" fill="#E3F2DF"/>
+<text x="22" y="38" font-size="14" font-weight="700" fill="#3C7D3A" opacity=".8">04</text>
+<g transform="translate(144.0 182)"><line x1="-125" y1="0" x2="125" y2="0" stroke="#00000022" stroke-width="2" stroke-dasharray="3 7"/><g transform=""><rect x="-80" y="-28" width="160" height="56" rx="28" fill="#EDC6A3" stroke="#B9835C" stroke-width="2"/><rect x="-50" y="-30" width="100" height="60" rx="6" fill="#1d4f3c" opacity=".08"/><rect x="-46" y="-44" width="92" height="24" rx="7" fill="#215C47"/><rect x="-31" y="-40" width="62" height="15" rx="4" fill="#D5F28B"/></g><g transform="translate(0 -48)"><rect x="-13" y="-92" width="26" height="80" rx="13" fill="#EDC6A3" stroke="#B9835C" stroke-width="2"/><rect x="-8" y="-30" width="16" height="14" rx="5" fill="#fff" opacity=".6"/></g><g fill="none" stroke="#3C7D3A" stroke-width="4" stroke-linecap="round"><path d="M-30 -84q-12 14 0 28M-46 -94q-20 24 0 48M30 -84q12 14 0 28M46 -94q20 24 0 48"/></g><g transform="translate(0 72)"><rect x="-30" y="-19" width="60" height="38" rx="19" fill="#3C7D3A"/><text y="7" text-anchor="middle" font-size="20" font-weight="800" fill="#fff">×2</text></g></g>
+<text x="144.0" y="316" font-size="12" fill="#00000066" text-anchor="middle">nhìn từ phía sau bàn tay</text>
+<text x="24" y="390" font-size="38" font-weight="800" letter-spacing="-1" fill="#243b31">Có</text>
+<rect x="211" y="364" width="53" height="30" rx="15" fill="#3C7D3A"/><text x="237.5" y="384" font-size="13" font-weight="800" letter-spacing="1" fill="#fff" text-anchor="middle" font-family="ui-monospace, Menlo, monospace">YES</text>
+<text x="24" y="432" font-size="19" font-style="italic" fill="#3C7D3A">“Có.”</text>
+<line x1="24" y1="458" x2="264" y2="458" stroke="#e6e9e1"/>
+<text x="24" y="474" font-size="12" font-weight="700" letter-spacing="1.5" fill="#7e936c">CÁCH LÀM</text>
+<text x="24" y="506" font-size="18" fill="#304a37">Để tay nằm yên, gõ nhẹ 2</text>
+<text x="24" y="534" font-size="18" fill="#304a37">lần liên tiếp lên vòng tay.</text>
+</g>
+<g transform="translate(1256 168)">
+<rect width="288" height="600" rx="24" fill="#fff" stroke="#dce2d4" filter="url(#sh)"/>
+<path d="M24 0H264A24 24 0 0 1 288 24V330H0V24A24 24 0 0 1 24 0Z" fill="#F7C6C0"/>
+<text x="22" y="38" font-size="14" font-weight="700" fill="#B0362A" opacity=".8">05</text>
+<g transform="translate(144.0 182)"><g transform="translate(-100 -30) scale(.86)"><line x1="0" y1="0" x2="225" y2="0" stroke="#00000022" stroke-width="2" stroke-dasharray="3 7"/><g transform="rotate(32)" fill="none" stroke="#00000033" stroke-width="2" stroke-dasharray="6 6"><rect x="0" y="-20" width="190" height="40" rx="20"/></g><g transform="rotate(0)"><rect x="0" y="-20" width="170" height="40" rx="20" fill="#EDC6A3" stroke="#B9835C" stroke-width="2"/><ellipse cx="185" cy="0" rx="30" ry="22" fill="#EDC6A3" stroke="#B9835C" stroke-width="2"/><rect x="118" y="-26" width="30" height="52" rx="7" fill="#215C47"/><rect x="122" y="-31" width="22" height="8" rx="3" fill="#D5F28B"/></g><circle r="16" fill="#EDC6A3" stroke="#B9835C" stroke-width="2"/><text y="-28" x="0" font-size="13" fill="#00000077" text-anchor="middle">khuỷu tay</text><path d="M227.4 -15.9 A228 228 0 0 1 197.5 114.0" fill="none" stroke="#B0362A" stroke-width="5" stroke-linecap="round" marker-end="url(#hB0362A)" marker-start="url(#hB0362A)"/></g><g transform="translate(-75 78)"><rect x="-30" y="-19" width="60" height="38" rx="19" fill="#B0362A"/><text y="7" text-anchor="middle" font-size="20" font-weight="800" fill="#fff">×2</text></g></g>
+<text x="144.0" y="316" font-size="12" fill="#00000066" text-anchor="middle">nhìn từ bên cạnh</text>
+<text x="24" y="390" font-size="38" font-weight="800" letter-spacing="-1" fill="#243b31">Giúp</text>
+<rect x="200" y="364" width="64" height="30" rx="15" fill="#B0362A"/><text x="232.0" y="384" font-size="13" font-weight="800" letter-spacing="1" fill="#fff" text-anchor="middle" font-family="ui-monospace, Menlo, monospace">HELP</text>
+<text x="24" y="432" font-size="19" font-style="italic" fill="#B0362A">“Tôi cần giúp đỡ.”</text>
+<line x1="24" y1="458" x2="264" y2="458" stroke="#e6e9e1"/>
+<text x="24" y="474" font-size="12" font-weight="700" letter-spacing="1.5" fill="#7e936c">CÁCH LÀM</text>
+<text x="24" y="506" font-size="18" fill="#304a37">Hạ cẳng tay xuống rồi nâng</text>
+<text x="24" y="534" font-size="18" fill="#304a37">lên lại, làm 2 lần trong 2</text>
+<text x="24" y="562" font-size="18" fill="#304a37">giây.</text>
+</g>
+<text x="40" y="804" font-size="14" fill="#77856c">Nét đứt = vị trí còn lại của động tác. Mũi tên = hướng chuyển động. App BandW đọc to câu nói khi vòng tay nhận ra cử chỉ.</text>
+</svg>
