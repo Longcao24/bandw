@@ -7,14 +7,14 @@
 export const C = Object.freeze({
   TILT_SIGN: 1,
   TILT_ENTER_DEG: 22, TILT_EXIT_DEG: 12,
-  PITCH_ENTER_DEG: 25, PITCH_EXIT_DEG: 12,
+  PITCH_ENTER_DEG: 40, PITCH_EXIT_DEG: 12,
   AXIS_MARGIN_DEG: 8, MIN_PLANE_G: 0.4, SHAKE_DPS: 100,
-  HOLD_MS: 250, DIP_MAX_MS: 700, HELP_WINDOW_MS: 2000, NEUTRAL_MS: 200, COOLDOWN_MS: 650,
-  TAP_CONFIRM_MS: 150, TAP_QUIET_BEFORE_MS: 300, TAP_STILL_DPS: 50,
+  HOLD_MS: 250, DIP_MAX_MS: 700, HELP_WINDOW_MS: 2000, NEUTRAL_MS: 500, COOLDOWN_MS: 1200,
+  TAP_CONFIRM_MS: 150, TAP_QUIET_BEFORE_MS: 300, TAP_STILL_DPS: 50, TAP_STIR_SAMPLES: 5, TAP_CANCEL_SAMPLES: 4,
   ALPHA: 0.22, SAMPLE_MS: 20,
   CAL_SAMPLES: 100, CAL_MAX_REJECTS: 10,
   SHAKE_WINDOW_MS: 900, SHAKE_GAP_MS: 80, SETTLE_MS: 150, MOTION_DPS: 70, STILL_DPS: 40,
-  TAP_GAP_MAX_MS: 538, TAP_THRESHOLD_G: 0.75,
+  TAP_GAP_MAX_MS: 538, TAP_THRESHOLD_G: 0.5,
 });
 
 export const GESTURE = Object.freeze({ None: 0, Water: 1, Food: 2, No: 3, Yes: 4, Help: 5 });
@@ -115,8 +115,8 @@ export class GestureDetector {
     if (speed > 70 || magnitude < 0.8 || magnitude > 1.2) this.lastMotion = now;
     this.stirRun = speed > C.TAP_STILL_DPS ? this.stirRun + 1 : 0;
     this.fastRun = speed > C.SHAKE_DPS ? this.fastRun + 1 : 0;
-    if (this.stirRun >= 2) this.lastStir = now;
-    if (this.fastRun >= 2) this.tapPending = false;
+    if (this.stirRun >= C.TAP_STIR_SAMPLES) this.lastStir = now;
+    if (this.fastRun >= C.TAP_CANCEL_SAMPLES) this.tapPending = false;
     if (this.cooling && since(now, this.lastEmission) >= C.COOLDOWN_MS) this.cooling = false;
     const rest = level && Math.abs(this.filtered) < C.TILT_EXIT_DEG && Math.abs(this.filteredPitch) < C.PITCH_EXIT_DEG;
     this.rest = rest; this.level = level; this.magnitude = magnitude; this.speed = speed;
@@ -275,23 +275,26 @@ const MOVE_MS = (deg) => Math.max(200, Math.round(Math.abs(deg) / 80 * 1000 / 20
 export const PRESETS = {
   rest: () => [{ hold: 600 }, { wobble: 3200, amp: 3, periodMs: 900 }, { hold: 400 }],
   walk: () => [{ hold: 400 }, { walk: 3600 }, { hold: 400 }],
-  water: () => [{ hold: 500 }, { move: MOVE_MS(40), roll: -40 }, { hold: 900 }, { move: MOVE_MS(40), roll: 0 }, { hold: 900 }],
-  food: () => [{ hold: 500 }, { move: MOVE_MS(40), roll: 40 }, { hold: 900 }, { move: MOVE_MS(40), roll: 0 }, { hold: 900 }],
-  // HELP: two quick forearm dips (out ≈40° and back), like gesture_test.cpp's helpDips().
-  help: () => [{ hold: 500 }, { move: 160, pitch: 40 }, { hold: 200 }, { move: 160, pitch: 0 }, { hold: 240 }, { move: 160, pitch: 40 }, { hold: 200 }, { move: 160, pitch: 0 }, { hold: 900 }],
-  no: () => [{ hold: 600 }, { shake: { amp: 220, n: 5, phases: 3 } }, { hold: 1200 }],
-  yes: () => [{ hold: 600 }, { hold: 240 }, { tap: true }, { hold: 1300 }],
-  flick: () => [{ hold: 500 }, { move: 360, roll: -32 }, { hold: 300 }, { move: 360, roll: 0 }, { hold: 900 }],
-  'held-no-repeat': () => [{ hold: 500 }, { move: MOVE_MS(40), roll: -40 }, { hold: 2400 }, { move: MOVE_MS(40), roll: 0 }, { hold: 700 }],
+  // Every scenario starts with ≥ 800 ms of still neutral: the band arms only after NEUTRAL_MS (500 ms) at rest.
+  water: () => [{ hold: 800 }, { move: MOVE_MS(40), roll: -40 }, { hold: 900 }, { move: MOVE_MS(40), roll: 0 }, { hold: 900 }],
+  food: () => [{ hold: 800 }, { move: MOVE_MS(40), roll: 40 }, { hold: 900 }, { move: MOVE_MS(40), roll: 0 }, { hold: 900 }],
+  // HELP: two quick, BIG forearm dips (out ≈55°, past PITCH_ENTER_DEG = 40°, and back), like gesture_test.cpp's helpDips().
+  help: () => [{ hold: 800 }, { move: 200, pitch: 55 }, { hold: 200 }, { move: 200, pitch: 0 }, { hold: 240 }, { move: 200, pitch: 55 }, { hold: 200 }, { move: 200, pitch: 0 }, { hold: 900 }],
+  no: () => [{ hold: 800 }, { shake: { amp: 220, n: 5, phases: 3 } }, { hold: 1200 }],
+  yes: () => [{ hold: 800 }, { hold: 240 }, { tap: true }, { hold: 1300 }],
+  flick: () => [{ hold: 800 }, { move: 360, roll: -32 }, { hold: 300 }, { move: 360, roll: 0 }, { hold: 900 }],
+  'held-no-repeat': () => [{ hold: 800 }, { move: MOVE_MS(40), roll: -40 }, { hold: 2400 }, { move: MOVE_MS(40), roll: 0 }, { hold: 700 }],
   // Only one dip: not HELP. Then a held posture (forearm lowered onto the lap): never HELP.
-  'help-short': () => [{ hold: 500 }, { move: 160, pitch: 40 }, { hold: 200 }, { move: 160, pitch: 0 }, { hold: 900 }, { move: MOVE_MS(40), pitch: 40 }, { hold: 1500 }, { move: MOVE_MS(40), pitch: 0 }, { hold: 700 }],
+  'help-short': () => [{ hold: 800 }, { move: 200, pitch: 55 }, { hold: 200 }, { move: 200, pitch: 0 }, { hold: 900 }, { move: MOVE_MS(55), pitch: 55 }, { hold: 1500 }, { move: MOVE_MS(55), pitch: 0 }, { hold: 700 }],
 };
+// After each gesture the band rests COOLDOWN_MS (1.2 s) and then needs NEUTRAL_MS (0.5 s) of still neutral,
+// so every gap below is ≥ 1.8 s.
 PRESETS.all = () => [
-  { hold: 600 }, { move: 500, roll: -40 }, { hold: 800 }, { move: 500, roll: 0 }, { hold: 900 },
-  { move: 500, roll: 40 }, { hold: 800 }, { move: 500, roll: 0 }, { hold: 900 },
-  { shake: { amp: 220, n: 5, phases: 3 } }, { hold: 1200 },
-  { hold: 200 }, { tap: true }, { hold: 1200 },
-  { move: 160, pitch: 40 }, { hold: 200 }, { move: 160, pitch: 0 }, { hold: 240 }, { move: 160, pitch: 40 }, { hold: 200 }, { move: 160, pitch: 0 }, { hold: 800 },
+  { hold: 800 }, { move: 500, roll: -40 }, { hold: 800 }, { move: 500, roll: 0 }, { hold: 1900 },
+  { move: 500, roll: 40 }, { hold: 800 }, { move: 500, roll: 0 }, { hold: 1900 },
+  { shake: { amp: 220, n: 5, phases: 3 } }, { hold: 2000 },
+  { hold: 200 }, { tap: true }, { hold: 2000 },
+  { move: 200, pitch: 55 }, { hold: 200 }, { move: 200, pitch: 0 }, { hold: 240 }, { move: 200, pitch: 55 }, { hold: 200 }, { move: 200, pitch: 0 }, { hold: 800 },
 ];
 
 /** Feed samples into a freshly calibrated detector; returns per-sample snapshots + events. */

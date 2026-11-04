@@ -91,22 +91,22 @@ test('detector: transient, slow, unstable, invalid, overflow, reconnect, upright
   const gentle = new Rig(); gentle.neutral(); gentle.hold(-25, 600); assert.ok(only(gentle, G.Water)); gentle.neutral(); gentle.hold(25, 600); assert.equal(gentle.events[1], G.Food);
   const resting = new Rig(); resting.neutral(); for (let i = 0; i < 300; i++) resting.sample(i % 2 ? 10 : -10, i % 2 ? 70 : -70); assert.equal(resting.events.length, 0);
   const soft = new Rig(); soft.neutral(); for (let ph = 0; ph < 3; ph++) for (let i = 0; i < 5; i++) soft.sample(0, ph % 2 ? -110 : 110); assert.ok(only(soft, G.No));
-  soft.hold(25, 1000); assert.equal(soft.events.length, 1); soft.hold(0, 500); soft.hold(25, 600); assert.equal(soft.events[1], G.Food);
+  soft.hold(25, 1000); assert.equal(soft.events.length, 1); soft.hold(0, 1200); soft.hold(25, 600); assert.equal(soft.events[1], G.Food);
   const spikes = new Rig(); spikes.neutral(); for (let i = 0; i < 6; i++) { spikes.sample(0, i % 2 ? -250 : 250); spikes.hold(0, 60); } assert.equal(spikes.events.length, 0);
 });
 
 test('detector: HELP (two quick forearm dips) and axis margin', () => {
   const dip = (r, p, ms = 300, gap = 300) => { r.holdPitch(p, ms); r.holdPitch(0, gap); };
-  const help = new Rig(); help.neutral(); dip(help, 40); dip(help, 40); assert.ok(only(help, G.Help));
+  const help = new Rig(); help.neutral(); dip(help, 55); dip(help, 55); assert.ok(only(help, G.Help));
   help.holdPitch(40, 3000); assert.equal(help.events.length, 1);
-  const up = new Rig(); up.neutral(); dip(up, -40); dip(up, -40); assert.ok(only(up, G.Help));
-  const one = new Rig(); one.neutral(); dip(one, 40); one.neutral(); assert.equal(one.events.length, 0);
-  const swing = new Rig(); swing.neutral(); dip(swing, 40); dip(swing, -40); swing.neutral(); assert.equal(swing.events.length, 0);
-  const slow = new Rig(); slow.neutral(); dip(slow, 40, 1000); dip(slow, 40, 1000); slow.neutral(); assert.equal(slow.events.length, 0);
+  const up = new Rig(); up.neutral(); dip(up, -55); dip(up, -55); assert.ok(only(up, G.Help));
+  const one = new Rig(); one.neutral(); dip(one, 55); one.neutral(); assert.equal(one.events.length, 0);
+  const swing = new Rig(); swing.neutral(); dip(swing, 55); dip(swing, -55); swing.neutral(); assert.equal(swing.events.length, 0);
+  const slow = new Rig(); slow.neutral(); dip(slow, 55, 1000); dip(slow, 55, 1000); slow.neutral(); assert.equal(slow.events.length, 0);
   const held = new Rig(); held.neutral(); held.holdPitch(40, 3000); assert.equal(held.events.length, 0);
   const diag = new Rig(); diag.neutral(); diag.holdRP(30, 30, 300); diag.neutral(); diag.holdRP(30, 30, 300); diag.neutral(); assert.equal(diag.events.length, 0);
   const rd = new Rig(); rd.neutral(); rd.holdRP(-40, 15, 1600); assert.ok(only(rd, G.Water));
-  const pd = new Rig(); pd.neutral(); for (let i = 0; i < 2; i++) { pd.holdRP(10, 40, 300); pd.holdRP(0, 0, 300); } assert.ok(only(pd, G.Help));
+  const pd = new Rig(); pd.neutral(); for (let i = 0; i < 2; i++) { pd.holdRP(10, 55, 300); pd.holdRP(0, 0, 300); } assert.ok(only(pd, G.Help));
 });
 
 test('detector: YES (double tap) needs rest and a quiet window', () => {
@@ -114,9 +114,9 @@ test('detector: YES (double tap) needs rest and a quiet window', () => {
   const unarmed = new Rig(); unarmed.tap(); unarmed.hold(0, 300); assert.equal(unarmed.events.length, 0);
   const tilted = new Rig(); tilted.neutral(); tilted.hold(18, 600); tilted.sample(18, 0, 1, 0, true); tilted.hold(18, 300); assert.equal(tilted.events.length, 0);
   const ys = new Rig(); ys.neutral(); shake(ys, 1); ys.hold(0, 500); assert.ok(only(ys, G.No));
-  const tr = new Rig(); tr.neutral(); tr.tap(); for (let i = 0; i < 3; i++) tr.sample(0, 150); tr.hold(0, 300); assert.equal(tr.events.length, 0);
-  const rt = new Rig(); rt.neutral(); rt.sample(0, 150); rt.sample(0, 150); rt.hold(0, 100); rt.tap(); rt.hold(0, 300); assert.equal(rt.events.length, 0);
-  rt.sample(0, 150); rt.sample(0, 150); rt.hold(0, 400); rt.tap(); rt.hold(0, 300); assert.ok(only(rt, G.Yes));
+  const tr = new Rig(); tr.neutral(); tr.tap(); for (let i = 0; i < 5; i++) tr.sample(0, 150); tr.hold(0, 300); assert.equal(tr.events.length, 0);
+  const rt = new Rig(); rt.neutral(); for (let i = 0; i < 6; i++) rt.sample(0, 150); rt.hold(0, 100); rt.tap(); rt.hold(0, 300); assert.equal(rt.events.length, 0);
+  rt.hold(0, 1200); for (let i = 0; i < 6; i++) rt.sample(0, 150); rt.hold(0, 400); rt.tap(); rt.hold(0, 300); assert.ok(only(rt, G.Yes));
 });
 
 test('calibrator: tolerant of a few rejects, refuses an unusable pose', () => {

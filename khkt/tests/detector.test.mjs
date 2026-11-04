@@ -29,7 +29,7 @@ function setup() {
     holdRP(tilt, pitch, ms) { for (let t = 0; t < ms; t += 20) this.sample(tilt, 0, 1, pitch); }
     tap() { this.sample(0, 0, 1, 0, true); }
     dip(pitch, ms = 300, gap = 300) { this.holdPitch(pitch, ms); this.holdPitch(0, gap); }
-    helpDips(pitch = 40) { this.dip(pitch); this.dip(pitch); }
+    helpDips(pitch = 55) { this.dip(pitch); this.dip(pitch); }
     rampPitch(to, dps, holdMs) {
       // float32 steps like the C++ rig
       const f = Math.fround; let p = 0; const step = f(dps * 0.02 * (to < 0 ? -1 : 1));
@@ -91,7 +91,7 @@ test('resting tremor ignored; soft shake = NO then re-arm', { skip }, () => {
   for (let phase = 0; phase < 3; ++phase) for (let i = 0; i < 5; ++i) soft.sample(0, phase % 2 ? -110 : 110);
   assert.ok(only(soft, G.No));
   soft.hold(25, 1000); assert.equal(soft.events.length, 1);
-  soft.hold(0, 500); soft.hold(25, 600); assert.equal(soft.events.length, 2); assert.equal(soft.events[1], G.Food);
+  soft.hold(0, 1200); soft.hold(25, 600); assert.equal(soft.events.length, 2); assert.equal(soft.events[1], G.Food);
 });
 
 test('vertical forearm never emits; single gyro spikes are not pulses', { skip }, () => {
@@ -114,16 +114,17 @@ test('HELP: two quick forearm dips the same way, either direction; postures and 
   const { Rig, G, only } = setup();
   const help = new Rig(); help.neutral(); help.helpDips(); assert.ok(only(help, G.Help));
   help.helpDips(); help.holdPitch(40, 3000); assert.equal(help.events.length, 1); // must return to neutral first
-  const helpUp = new Rig(); helpUp.neutral(); helpUp.helpDips(-40); assert.ok(only(helpUp, G.Help));
-  const gentleHelp = new Rig(); gentleHelp.neutral(); gentleHelp.helpDips(30); assert.ok(only(gentleHelp, G.Help));
-  const oneDip = new Rig(); oneDip.neutral(); oneDip.dip(40); oneDip.neutral(); assert.equal(oneDip.events.length, 0);
-  const swing = new Rig(); swing.neutral(); swing.dip(40); swing.dip(-40); swing.neutral(); assert.equal(swing.events.length, 0);
-  const slowDips = new Rig(); slowDips.neutral(); slowDips.dip(40, 1000); slowDips.dip(40, 1000); slowDips.neutral(); assert.equal(slowDips.events.length, 0);
-  const farDips = new Rig(); farDips.neutral(); farDips.dip(40, 300, 1800); farDips.dip(40); farDips.neutral(); assert.equal(farDips.events.length, 0);
+  const helpUp = new Rig(); helpUp.neutral(); helpUp.helpDips(-55); assert.ok(only(helpUp, G.Help));
+  for (const d of [25, 30, 35, -35]) { const small = new Rig(); small.neutral(); small.helpDips(d); small.neutral(); assert.equal(small.events.length, 0, `small dip ${d}`); }
+  const bigHelp = new Rig(); bigHelp.neutral(); bigHelp.helpDips(45); assert.ok(only(bigHelp, G.Help));
+  const oneDip = new Rig(); oneDip.neutral(); oneDip.dip(55); oneDip.neutral(); assert.equal(oneDip.events.length, 0);
+  const swing = new Rig(); swing.neutral(); swing.dip(55); swing.dip(-55); swing.neutral(); assert.equal(swing.events.length, 0);
+  const slowDips = new Rig(); slowDips.neutral(); slowDips.dip(55, 1000); slowDips.dip(55, 1000); slowDips.neutral(); assert.equal(slowDips.events.length, 0);
+  const farDips = new Rig(); farDips.neutral(); farDips.dip(55, 300, 1800); farDips.dip(55); farDips.neutral(); assert.equal(farDips.events.length, 0);
   const diagonal = new Rig(); diagonal.neutral(); diagonal.holdRP(30, 30, 300); diagonal.neutral(); diagonal.holdRP(30, 30, 300);
   diagonal.neutral(); assert.equal(diagonal.events.length, 0);
   const rollDom = new Rig(); rollDom.neutral(); rollDom.holdRP(-40, 15, 1600); assert.ok(only(rollDom, G.Water));
-  const pitchDom = new Rig(); pitchDom.neutral(); for (let i = 0; i < 2; ++i) { pitchDom.holdRP(10, 40, 300); pitchDom.holdRP(0, 0, 300); }
+  const pitchDom = new Rig(); pitchDom.neutral(); for (let i = 0; i < 2; ++i) { pitchDom.holdRP(10, 55, 300); pitchDom.holdRP(0, 0, 300); }
   assert.ok(only(pitchDom, G.Help));
   const rearm = new Rig(); rearm.neutral(); rearm.helpDips(); rearm.hold(-45, 1800);
   assert.ok(only(rearm, G.Help)); rearm.neutral(); rearm.hold(-45, 1600); assert.deepEqual(rearm.events, [G.Help, G.Water]);
@@ -133,7 +134,7 @@ test('HELP: two quick forearm dips the same way, either direction; postures and 
     const sip = new Rig(); sip.neutral(); sip.rampPitch(p, 100, 1000); sip.rampPitch(0, 100, 600);
     sip.rampPitch(p, 100, 1000); sip.rampPitch(0, 100, 600); assert.equal(sip.events.length, 0, `sip ${p}`);
   }
-  for (const [hi, lo] of [[75, 45], [15, 45]]) {
+  for (const [hi, lo] of [[90, 45], [-5, 45]]) {
     const pc = new Rig(); pc.detector.calibrate(0, 0.7071, 0.7071, pc.now);
     for (let i = 0; i < 110; ++i) pc.sample(0, 0, 1, 45);
     for (let k = 0; k < 2; ++k) { pc.holdPitch(hi, 300); pc.holdPitch(lo, 300); }
@@ -147,13 +148,13 @@ test('YES: hardware double tap confirmed from neutral; rejected while unarmed / 
   const unarmed = new Rig(); unarmed.tap(); unarmed.hold(0, 300); assert.equal(unarmed.events.length, 0);
   const tilted = new Rig(); tilted.neutral(); tilted.hold(18, 600); tilted.sample(18, 0, 1, 0, true); tilted.hold(18, 300); assert.equal(tilted.events.length, 0);
   const yesShake = new Rig(); yesShake.neutral(); shake(yesShake, 1); yesShake.hold(0, 500); assert.ok(only(yesShake, G.No));
-  const tapRotate = new Rig(); tapRotate.neutral(); tapRotate.tap(); for (let i = 0; i < 3; ++i) tapRotate.sample(0, 150);
+  const tapRotate = new Rig(); tapRotate.neutral(); tapRotate.tap(); for (let i = 0; i < 5; ++i) tapRotate.sample(0, 150);
   tapRotate.hold(0, 300); assert.equal(tapRotate.events.length, 0);
-  const rotateTap = new Rig(); rotateTap.neutral(); rotateTap.sample(0, 150); rotateTap.sample(0, 150); rotateTap.hold(0, 100);
+  const rotateTap = new Rig(); rotateTap.neutral(); for (let i = 0; i < 6; ++i) rotateTap.sample(0, 150); rotateTap.hold(0, 100);
   rotateTap.tap(); rotateTap.hold(0, 300); assert.equal(rotateTap.events.length, 0);
-  rotateTap.sample(0, 150); rotateTap.sample(0, 150); rotateTap.hold(0, 400);
+  rotateTap.hold(0, 1200); for (let i = 0; i < 6; ++i) rotateTap.sample(0, 150); rotateTap.hold(0, 400);
   rotateTap.tap(); rotateTap.hold(0, 300); assert.ok(only(rotateTap, G.Yes));
-  const cd = new Rig(); cd.neutral(); cd.tap(); cd.hold(0, 180); cd.tap(); cd.hold(0, 1000); assert.ok(only(cd, G.Yes));
+  const cd = new Rig(); cd.neutral(); cd.tap(); cd.hold(0, 180); cd.tap(); cd.hold(0, 1800); assert.ok(only(cd, G.Yes));
   cd.tap(); cd.hold(0, 300); assert.deepEqual(cd.events, [G.Yes, G.Yes]);
   const spike = new Rig(); spike.neutral(); spike.tap(); spike.sample(0, 0, 2.5); spike.sample(0, 0, 2.5); spike.hold(0, 1500); assert.ok(only(spike, G.Yes));
   const tapInvalid = new Rig(); tapInvalid.neutral(); tapInvalid.tap();
@@ -162,6 +163,14 @@ test('YES: hardware double tap confirmed from neutral; rejected while unarmed / 
   const tapJolt = new Rig(); tapJolt.neutral(); tapJolt.sample(0, 109, 1, 0, true); tapJolt.hold(0, 300); assert.ok(only(tapJolt, G.Yes));
   const firstJolt = new Rig(); firstJolt.neutral(); firstJolt.sample(0, 113); firstJolt.hold(0, 220); firstJolt.tap(); firstJolt.hold(0, 300);
   assert.ok(only(firstJolt, G.Yes));
+  // Wrist ringing after each real finger tap must not veto or cancel YES.
+  const ringing = new Rig(); ringing.neutral(); for (let i = 0; i < 3; ++i) ringing.sample(0, 80);
+  ringing.hold(0, 160); ringing.tap(); for (let i = 0; i < 3; ++i) ringing.sample(0, 120); ringing.hold(0, 300); assert.ok(only(ringing, G.Yes));
+  // No repeats: a long shake is one NO, three dips are one HELP, a tap during the cooldown is ignored.
+  const longShake = new Rig(); longShake.neutral(); for (let ph = 0; ph < 8; ++ph) for (let i = 0; i < 5; ++i) longShake.sample(0, ph % 2 ? -220 : 220);
+  longShake.hold(0, 300); assert.ok(only(longShake, G.No));
+  const threeDips = new Rig(); threeDips.neutral(); threeDips.helpDips(); threeDips.dip(55); threeDips.dip(55); threeDips.hold(0, 300); assert.ok(only(threeDips, G.Help));
+  const helpThenTap = new Rig(); helpThenTap.neutral(); helpThenTap.helpDips(); helpThenTap.hold(0, 400); helpThenTap.tap(); helpThenTap.hold(0, 300); assert.ok(only(helpThenTap, G.Help));
   const setDown = new Rig(); setDown.neutral(); for (let i = 0; i < 10; ++i) setDown.sample(0, 60); setDown.tap(); setDown.hold(0, 300);
   assert.equal(setDown.events.length, 0);
   const o2 = new Rig(UINT32_MAX - 1000); o2.neutral(); o2.tap(); o2.hold(0, 300); o2.neutral(); o2.helpDips();
@@ -191,7 +200,7 @@ test('constants match the firmware', { skip }, async () => {
   const h = readFileSync(fw, 'utf8');
   const C = D.C || D.CONSTANTS || D;
   for (const name of ['TILT_ENTER_DEG', 'TILT_EXIT_DEG', 'PITCH_ENTER_DEG', 'PITCH_EXIT_DEG', 'AXIS_MARGIN_DEG', 'MIN_PLANE_G', 'SHAKE_DPS',
-    'HOLD_MS', 'DIP_MAX_MS', 'HELP_WINDOW_MS', 'NEUTRAL_MS', 'COOLDOWN_MS', 'TAP_CONFIRM_MS', 'TAP_QUIET_BEFORE_MS', 'TAP_STILL_DPS']) {
+    'HOLD_MS', 'DIP_MAX_MS', 'HELP_WINDOW_MS', 'NEUTRAL_MS', 'COOLDOWN_MS', 'TAP_CONFIRM_MS', 'TAP_QUIET_BEFORE_MS', 'TAP_STILL_DPS', 'TAP_STIR_SAMPLES', 'TAP_CANCEL_SAMPLES']) {
     const m = h.match(new RegExp(`\\b${name}\\s*=\\s*([0-9.]+)`));
     assert.ok(m, `${name} không còn trong GestureDetector.h: cần cập nhật bản port JS và nội dung`);
     assert.equal(Number(C[name]), parseFloat(m[1]), name);

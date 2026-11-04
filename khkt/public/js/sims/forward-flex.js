@@ -79,7 +79,7 @@ export function mount(el, props = {}, ctx = {}) {
   traceG.append(s('text', { x: X0, y: Y0 - (narrow ? 12 : 9), 'font-size': CF + 1, 'font-weight': 700 }, narrow ? '|góc gập| · 4 giây gần nhất' : '|góc gập đã lọc| theo thời gian · 4 giây gần nhất'));
   traceG.append(s('line', { x1: X0, x2: X1, y1: cy(C.PITCH_ENTER_DEG), y2: cy(C.PITCH_ENTER_DEG), class: 'line-enter' }));
   traceG.append(s('line', { x1: X0, x2: X1, y1: cy(C.PITCH_EXIT_DEG), y2: cy(C.PITCH_EXIT_DEG), class: 'line-exit' }));
-  [[C.PITCH_ENTER_DEG, '25°'], [C.PITCH_EXIT_DEG, '12°'], [0, '0°']].forEach(([d, l]) => traceG.append(s('text', { x: X0 - 5, y: cy(d) + 4, 'text-anchor': 'end', 'font-size': CF, class: 't-muted' }, l)));
+  [[C.PITCH_ENTER_DEG, `${C.PITCH_ENTER_DEG}°`], [C.PITCH_EXIT_DEG, `${C.PITCH_EXIT_DEG}°`], [0, '0°']].forEach(([d, l]) => traceG.append(s('text', { x: X0 - 5, y: cy(d) + 4, 'text-anchor': 'end', 'font-size': CF, class: 't-muted' }, l)));
   const spanG = s('g'), lineEl = s('polyline', { fill: 'none', stroke: 'var(--viz-y)', 'stroke-width': 2.5, 'stroke-linejoin': 'round' }), markG = s('g');
   traceG.append(spanG, lineEl, markG);
   traceG.append(s('text', { x: X1, y: CH - 4, 'text-anchor': 'end', 'font-size': CF, class: 't-muted' }, narrow ? 'xanh = nhấp ≤ 700 ms · đỏ = giữ' : 'nền xanh = một lần nhấp (≤ 700 ms) · nền đỏ = giữ tư thế, không tính'));
