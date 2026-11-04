@@ -46,6 +46,20 @@ canvas.chart{width:100%;height:150px;display:block;background:var(--chart-bg);bo
 .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#c33;margin-right:6px;animation:bl 1s infinite}
 @keyframes bl{50%{opacity:.2}}
 .note{font-size:12px;color:var(--muted);line-height:1.6;margin:10px 0 0}
+#guide{position:fixed;inset:0;background:color-mix(in srgb,var(--bg) 92%,transparent);display:none;align-items:center;justify-content:center;z-index:10;padding:16px}
+#guide.show{display:flex}
+.gbox{max-width:620px;width:100%;text-align:center;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:28px 20px}
+.gstep{font-size:13px;letter-spacing:2px;color:var(--muted);font-weight:700}
+.gtitle{font-size:clamp(30px,7vw,52px);font-weight:850;letter-spacing:-1.5px;margin:12px 0 6px;line-height:1.1}
+.ghint{color:var(--muted);font-size:16px;line-height:1.6;min-height:52px}
+.gcount{font:700 44px ui-monospace,Menlo,monospace;margin:8px 0}
+.gbar{height:8px;background:var(--grid);border-radius:8px;overflow:hidden;margin:14px 0}
+.gbar div{height:100%;background:var(--accent);width:0}
+.gbox.go{border-color:var(--yes);box-shadow:0 0 0 4px color-mix(in srgb,var(--yes) 30%,transparent)}
+.gbox.go .gtitle{color:var(--yes)}
+.form{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+.form input[type=text],.form input[type=number]{font:inherit;font-size:14px;border:1px solid var(--line);border-radius:10px;padding:9px 10px;background:var(--card);color:var(--ink);width:110px}
+.form label{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:4px}
 @media (max-width:900px){main{grid-template-columns:1fr}#scene{height:300px}.nums{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
@@ -87,7 +101,17 @@ canvas.chart{width:100%;height:150px;display:block;background:var(--chart-bg);bo
     <div class="legend"><i style="background:var(--help)"></i>Gập cẳng tay<i style="background:#c33"></i>±40° (HELP)</div>
     <canvas class="chart" id="cGyro"></canvas>
     <div class="legend"><i style="background:var(--no)"></i>Tốc độ xoay cổ tay<i style="background:#c33"></i>±100°/s (NO) · <span style="color:var(--yes)">▲</span> gõ đôi · nhãn = cử chỉ nhận được</div>
-    <h2 style="margin-top:14px">Ghi dữ liệu để gửi phân tích</h2>
+    <h2 style="margin-top:14px">Thu dữ liệu cho TinyML (có hướng dẫn)</h2>
+    <div class="form">
+      <input type="text" id="person" placeholder="Mã người (P1)" aria-label="Mã người ghi" maxlength="12">
+      <label>Mỗi cử chỉ <input type="number" id="reps" value="10" min="3" max="30" aria-label="Số lần mỗi cử chỉ"> lần</label>
+      <label><input type="checkbox" class="gsel" value="WATER" checked>WATER</label><label><input type="checkbox" class="gsel" value="FOOD" checked>FOOD</label>
+      <label><input type="checkbox" class="gsel" value="NO" checked>NO</label><label><input type="checkbox" class="gsel" value="HELP" checked>HELP</label>
+      <label><input type="checkbox" class="gsel" value="YES" checked>YES</label>
+    </div>
+    <div class="rec"><button class="primary" id="gstart">Bắt đầu phiên ghi</button><span class="count" id="gest">≈ 0 phút</span></div>
+    <p class="note">Trang sẽ nhắc từng động tác theo thứ tự ngẫu nhiên, có tiếng bíp khi tới lúc làm, rồi một phút "làm việc bình thường". Hết phiên, file CSV tự tải về. Mỗi người một mã riêng (P1, P2…), ghi càng nhiều người càng tốt.</p>
+    <h2 style="margin-top:14px">Ghi dữ liệu tự do</h2>
     <div class="rec">
       <select id="label" aria-label="Đang làm động tác gì">
         <option value="rest">Để tay yên</option><option value="WATER">WATER (nghiêng trái)</option><option value="FOOD">FOOD (nghiêng phải)</option>
@@ -103,6 +127,10 @@ canvas.chart{width:100%;height:150px;display:block;background:var(--chart-bg);bo
     <div class="log" id="log"></div>
   </section>
 </main>
+<div id="guide" role="dialog" aria-modal="true" aria-labelledby="gTitle"><div class="gbox" id="gbox">
+  <div class="gstep" id="gStep">BƯỚC 1/1</div><div class="gtitle" id="gTitle">—</div><div class="ghint" id="gHint"></div>
+  <div class="gcount" id="gCount"></div><div class="gbar"><div id="gBar"></div></div>
+  <button id="gstop">Dừng phiên (vẫn lưu phần đã ghi)</button></div></div>
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 
@@ -129,7 +157,7 @@ function onSample(s) {
   latest = s;
   if (s.event) showEvent(s.event);
   if (s.tap) { const c = $('tapChip'); c.classList.add('on'); setTimeout(() => c.classList.remove('on'), 500); }
-  if (recording) rows.push([Math.round(performance.now()), s.seq, $('label').value, s.ax, s.ay, s.az, s.gx, s.gy, s.gz, s.tap, s.state & 1, (s.state >> 1) & 1, (s.state >> 2) & 1, (s.state >> 3) & 1, (s.state >> 4) & 1, s.event, s.roll.toFixed(1), s.pitch.toFixed(1)]);
+  if (recording) rows.push([Math.round(performance.now()), s.seq, session ? session.label : $('label').value, session ? session.person : ($('person').value.trim() || ''), session ? session.step : '', s.ax, s.ay, s.az, s.gx, s.gy, s.gz, s.tap, s.state & 1, (s.state >> 1) & 1, (s.state >> 2) & 1, (s.state >> 3) & 1, (s.state >> 4) & 1, s.event, s.roll.toFixed(1), s.pitch.toFixed(1)]);
 }
 function showEvent(code) {
   const e = EVENTS[code]; if (!e) return;
@@ -214,13 +242,73 @@ $('rec').addEventListener('click', () => {
 });
 $('label').addEventListener('change', () => { if (recording) log(`Đổi nhãn: ${$('label').value}`); });
 setInterval(() => { $('recCount').textContent = `${rows.length} mẫu`; }, 250);
-$('save').addEventListener('click', () => {
-  const head = 't_ms,seq,label,ax_g,ay_g,az_g,gx_dps,gy_dps,gz_dps,tap,armed,cooling,tap_pending,tilt_candidate,in_dip,event,roll_deg,pitch_deg';
+$('save').addEventListener('click', () => saveCsv());
+function saveCsv(prefix = 'bandw') {
+  const head = 't_ms,seq,label,person,step,ax_g,ay_g,az_g,gx_dps,gy_dps,gz_dps,tap,armed,cooling,tap_pending,tilt_candidate,in_dip,event,roll_deg,pitch_deg';
   const blob = new Blob([head + '\n' + rows.map((r) => r.join(',')).join('\n') + '\n'], { type: 'text/csv' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = `bandw-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.csv`; a.click();
+  a.download = `${prefix}-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.csv`; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+// ---------- guided TinyML session ----------
+const HOW = { WATER: ['NGHIÊNG TRÁI', 'Nghiêng cổ tay sang trái rồi giữ một chút, sau đó về.'], FOOD: ['NGHIÊNG PHẢI', 'Nghiêng cổ tay sang phải rồi giữ một chút, sau đó về.'],
+  NO: ['LẮC CỔ TAY', 'Lắc cổ tay qua lại nhanh 3 lần.'], HELP: ['HẠ TAY 2 LẦN', 'Hạ cẳng tay xuống thật rõ rồi nâng lên, làm 2 lần liền.'], YES: ['GÕ 2 LẦN', 'Gõ nhẹ 2 cái liên tiếp lên vòng tay.'] };
+let session = null;
+const SPEED = new URLSearchParams(location.search).has('fast') ? 0.05 : 1; // ?fast = test the flow quickly
+const PREP = 1500 * SPEED, DO = 3000 * SPEED, GAP = 2000 * SPEED, REST = 10000 * SPEED, DAILY = 60000 * SPEED;
+function plan() {
+  const sel = [...document.querySelectorAll('.gsel:checked')].map((c) => c.value), reps = Math.max(3, Math.min(30, +$('reps').value || 10));
+  const list = []; sel.forEach((g) => { for (let i = 0; i < reps; i++) list.push(g); });
+  for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
+  const steps = [{ label: 'NONE_rest', title: 'ĐỂ TAY YÊN', hint: 'Đặt tay tự nhiên như lúc ngồi nghỉ. Không cần cố giữ bất động.', ms: REST }];
+  list.forEach((g, i) => {
+    steps.push({ label: 'prep', title: `Chuẩn bị: ${HOW[g][0]}`, hint: HOW[g][1], ms: PREP, n: `${i + 1}/${list.length}` });
+    steps.push({ label: g, title: `LÀM NGAY: ${HOW[g][0]}`, hint: HOW[g][1], ms: DO, go: true, n: `${i + 1}/${list.length}` });
+    steps.push({ label: 'gap', title: 'Về tư thế ban đầu', hint: 'Thả lỏng, đưa tay về như lúc nghỉ.', ms: GAP, n: `${i + 1}/${list.length}` });
+  });
+  steps.push({ label: 'NONE_daily', title: 'LÀM VIỆC BÌNH THƯỜNG', hint: 'Cầm cốc uống nước, gãi đầu, gõ phím, vẫy tay, đặt tay lên bàn… KHÔNG làm cử chỉ BandW.', ms: DAILY });
+  return steps;
+}
+function updEst() { const ms = plan().reduce((a, s) => a + s.ms, 0); $('gest').textContent = `≈ ${Math.ceil(ms / 60000)} phút`; }
+document.querySelectorAll('.gsel').forEach((c) => c.addEventListener('change', updEst)); $('reps').addEventListener('input', updEst); updEst();
+let actx = null;
+function beep(f = 880, ms = 160) { try { actx = actx || new AudioContext(); const o = actx.createOscillator(), g = actx.createGain(); o.frequency.value = f; g.gain.value = 0.15; o.connect(g).connect(actx.destination); o.start(); o.stop(actx.currentTime + ms / 1000); } catch {} }
+$('gstart').addEventListener('click', () => {
+  if (!latest) { $('status').textContent = 'Kết nối vòng tay (hoặc bấm Chạy thử) trước khi bắt đầu phiên ghi.'; return; }
+  const person = $('person').value.trim() || 'P?';
+  const steps = plan();
+  session = { person, steps, i: -1, label: 'NONE_rest', step: 0, end: 0 };
+  rows = []; recording = true; $('save').disabled = true; $('rec').innerHTML = '<span class="dot"></span>Dừng';
+  $('guide').classList.add('show'); log(`Bắt đầu phiên ghi TinyML (${person}, ${steps.length} bước)`);
+  next();
 });
+function next() {
+  if (!session) return;
+  session.i++;
+  if (session.i >= session.steps.length) return finish(true);
+  const st = session.steps[session.i];
+  session.label = st.label; session.step = session.i; session.end = performance.now() + st.ms; session.ms = st.ms;
+  $('gStep').textContent = st.n ? `ĐỘNG TÁC ${st.n}` : `BƯỚC ${session.i + 1}/${session.steps.length}`;
+  $('gTitle').textContent = st.title; $('gHint').textContent = st.hint;
+  $('gbox').classList.toggle('go', !!st.go);
+  if (st.go) beep(990, 180); else if (st.label === 'NONE_daily' || st.label === 'NONE_rest') beep(520, 250);
+}
+function finish(done) {
+  if (!session) return;
+  const person = session.person; session = null; recording = false;
+  $('guide').classList.remove('show'); $('rec').textContent = '● Ghi'; $('save').disabled = !rows.length;
+  log(`${done ? 'Xong' : 'Dừng'} phiên ghi: ${rows.length} mẫu`);
+  if (rows.length) saveCsv(`bandw-tinyml-${person.replace(/[^\w-]/g, '')}`);
+}
+$('gstop').addEventListener('click', () => finish(false));
+setInterval(() => {
+  if (!session) return;
+  const left = Math.max(0, session.end - performance.now());
+  $('gCount').textContent = (left / 1000).toFixed(1);
+  $('gBar').style.width = `${100 - (left / session.ms) * 100}%`;
+  if (left <= 0) next();
+}, 50);
 
 // ---------- 3D ----------
 const canvas = $('scene');
