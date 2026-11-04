@@ -1,19 +1,19 @@
 {
-  "version": "0.5.1",
+  "version": "0.5.0",
   "board": "XIAO nRF52840 Sense",
   "fqbn": "Seeeduino:mbed:xiaonRF52840Sense",
   "core": "2.9.3",
-  "sourceCommit": "e83ef16c8430d8ec45135aef65666448aec979a5",
+  "sourceCommit": "11e23d461be98ff1ebaf6506b914f1fc4e93f9e3",
   "deviceType": 82,
   "applicationOnly": true,
   "firmware": {
     "file": "bandw-sense.bin",
-    "size": 339856,
-    "sha256": "9cc8d7820c5bba9512e4f120a49bd7783a4693536f44fb804236d65ced1a1f3f"
+    "size": 339480,
+    "sha256": "68e9b1b5807f81dcdf0be14432c0e4b82c10cd06764e289aa8efb3c5ba39cb41"
   },
   "init": {
     "file": "bandw-sense.dat",
     "size": 14,
-    "sha256": "c29ebf64151ee062a0d0cb5986ad911a65c71b0606289dbde56ddadf7196f513"
+    "sha256": "b85bfe71d8c79ebf8e7ce259e2387e6cf0b2222950af34a6ce5264af9cccca3f"
   }
 }
