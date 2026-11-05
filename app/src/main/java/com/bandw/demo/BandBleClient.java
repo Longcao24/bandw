@@ -35,7 +35,7 @@ final class BandBleClient {
     static final UUID CONTROL = UUID.fromString("c91b0003-7d7a-4f8c-9d29-6e44c786a321");
     private static final UUID CCCD = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
     private static final String TAG = "BandW";
-    private static final int SCAN_MS = 8000, CONNECT_MS = 15000, CALIBRATION_MS = 30000, SLOW_RETRY_MS = 30000;
+    private static final int SCAN_MS = 8000, CONNECT_MS = 15000, CALIBRATION_MS = 70000, SLOW_RETRY_MS = 30000;
     /** Fast retries first; after that the band is retried every SLOW_RETRY_MS until the user disconnects. */
     private static final int[] BACKOFF_MS = {1000, 2000, 4000, 8000, 15000, 15000};
     interface Listener {
@@ -309,11 +309,20 @@ final class BandBleClient {
             listener.calibration(true, "Đã hiệu chuẩn · Có thể thực hiện cử chỉ");
         } else if ("CALIBRATING".equals(state)) {
             waitingForCalibration();
+        } else if ("CAL_LEFT".equals(state)) {
+            // Firmware 0.6.0+: 3-step calibration (hold still -> tilt left -> tilt right) finds how the board sits.
+            calibrating = true;
+            listener.calibration(false, "Bước 2/3: nghiêng cổ tay sang TRÁI khoảng 30–45° rồi giữ yên.");
+        } else if ("CAL_RIGHT".equals(state)) {
+            calibrating = true;
+            listener.calibration(false, "Bước 3/3: nghiêng cổ tay sang PHẢI khoảng 30–45° rồi giữ yên.");
+        } else if ("CAL_SKIPPED".equals(state)) {
+            listener.calibration(false, "Không thấy nghiêng trái/phải: giữ hướng cũ, đang hoàn tất…");
         }
     }
     private void waitingForCalibration() {
         calibrating = true;
-        listener.calibration(false, "Đang hiệu chuẩn — giữ tay yên ở tư thế trung tính trong 2 giây.");
+        listener.calibration(false, "Bước 1/3: giữ tay yên ở tư thế bình thường (mu bàn tay hướng lên) khoảng 2 giây.");
         if (calibrationTimeout != null) handler.removeCallbacks(calibrationTimeout);
         final int session = generation;
         // Non-fatal: keep the link; a later READY still completes calibration.

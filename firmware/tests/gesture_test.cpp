@@ -182,6 +182,43 @@ int main() {
     overflow2.neutral(); overflow2.helpDips();
     assert(overflow2.events.size()==2 && overflow2.events[0]==Gesture::Yes && overflow2.events[1]==Gesture::Help);
 
+    // Orientation from the 3-step calibration: any mounting maps to the band frame
+    // (X across the wrist, + = right tilt; Y along the forearm; Z out of the back of the wrist).
+    {
+        struct Mount { float r[3][3]; };   // board axes expressed in band coordinates (rows = board x, y, z)
+        const Mount mounts[] = {
+            {{{1,0,0},{0,1,0},{0,0,1}}},      // as designed
+            {{{0,1,0},{-1,0,0},{0,0,1}}},     // turned 90 deg in the strap
+            {{{-1,0,0},{0,-1,0},{0,0,1}}},    // turned 180 deg
+            {{{0,-1,0},{-1,0,0},{0,0,-1}}},   // flipped over and turned
+        };
+        for (const Mount& mt : mounts) {
+            // gravity (band frame) for neutral, left 30 deg, right 30 deg -> board readings
+            auto toBoard = [&](float bx, float by, float bz, float* out) {
+                for (int i = 0; i < 3; ++i) out[i] = mt.r[i][0]*bx + mt.r[i][1]*by + mt.r[i][2]*bz; };
+            float s30 = sinf(30/57.2957795f), c30 = cosf(30/57.2957795f);
+            float g0[3], gl[3], gr[3]; toBoard(0,0,1,g0); toBoard(-s30,0,c30,gl); toBoard(s30,0,c30,gr);
+            Orientation o; assert(o.fromTilts(g0, gl, gr));
+            // a right tilt of 40 deg reads as +X; forearm pitch reads on Y only
+            float v[3]; float s40 = sinf(40/57.2957795f), c40 = cosf(40/57.2957795f);
+            toBoard(s40, 0, c40, v); o.apply(v[0], v[1], v[2]);
+            assert(fabsf(v[0]-s40) < 1e-3f && fabsf(v[1]) < 1e-3f && fabsf(v[2]-c40) < 1e-3f);
+            toBoard(0, s40, c40, v); o.apply(v[0], v[1], v[2]);
+            assert(fabsf(v[0]) < 1e-3f && fabsf(fabsf(v[1])-s40) < 1e-3f);
+            // end to end: with the orientation applied, a left tilt of the turned board is WATER
+            GestureDetector d; float n[3] = {g0[0], g0[1], g0[2]}; o.apply(n[0], n[1], n[2]);
+            uint32_t t = 0; d.calibrate(n[0], n[1], n[2], t); std::vector<Gesture> ev;
+            auto feed = [&](float roll, int ms) { for (int k = 0; k < ms; k += 20) { float b[3]; float r = roll/57.2957795f;
+                toBoard(sinf(r), 0, cosf(r), b); o.apply(b[0], b[1], b[2]); Gesture g = d.update(b[0], b[1], b[2], 0, 0, 0, t += 20);
+                if (g != Gesture::None) ev.push_back(g); } };
+            feed(0, 2200); feed(-45, 1600); assert(ev.size()==1 && ev[0]==Gesture::Water);
+            feed(0, 2200); feed(45, 1600); assert(ev.size()==2 && ev[1]==Gesture::Food);
+        }
+        // Unusable tilts (both to the same side, or too small) are refused and leave the orientation alone.
+        float g0[3] = {0,0,1}, a[3] = {0.5f,0,0.87f}, b[3] = {0.4f,0,0.92f}, tiny[3] = {-0.1f,0,0.99f};
+        Orientation o; assert(!o.fromTilts(g0, a, b)); assert(!o.fromTilts(g0, tiny, a)); assert(o.identity());
+    }
+
     // Calibrator: tolerant of a few jittery samples, rejects a pose it cannot use.
     Calibrator cal; int n = 0;
     for (int i=0;i<200 && !cal.add(0.1f, 0.2f, 0.97f, 2, -3, 1); ++i) ++n;
@@ -196,5 +233,5 @@ int main() {
     for (int i=0;i<400 && !done;++i) done = moving.add(sinf(i*0.3f)*0.5f, 0, 0.85f, 0, 60, 0);
     assert(!done);
     puts("PASS: left/right, hold, neutral rearm, shake priority, transient/slow/noisy motion, invalid input, reconnect, "
-         "timer rollover, vertical forearm, HELP (two forearm dips, postures rejected), YES (double tap), calibrator");
+         "timer rollover, vertical forearm, HELP (two forearm dips, postures rejected), YES (double tap), orientation, calibrator");
 }
