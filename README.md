@@ -8,7 +8,7 @@ App Android native cho prototype vòng tay XIAO nRF52840 Sense. Bản 0.3.0 hỗ
 
 ## Tải và cài APK
 
-[Tải APK v0.5.0](https://github.com/Longcao24/bandw/releases/download/v0.5.0/BandW-0.5.0-debug.apk) · [Tất cả bản phát hành](https://github.com/Longcao24/bandw/releases)
+[Tải APK v0.6.3](https://github.com/Longcao24/bandw/releases/download/v0.6.3/BandW-0.6.3-debug.apk) · [Tất cả bản phát hành](https://github.com/Longcao24/bandw/releases)
 
 Mở link APK trên điện thoại Android 8.0+, tải xuống rồi mở file để cài. Nếu Android hỏi, cho phép trình duyệt hoặc ứng dụng quản lý file **Cài đặt ứng dụng không rõ nguồn gốc**. Đây là APK debug dành cho demo, chưa phát hành trên Play Store.
 

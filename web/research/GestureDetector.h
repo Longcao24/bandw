@@ -24,9 +24,24 @@ static const float AXIS_MARGIN_DEG = 8.0f;   // a dip must be mostly pitch, not 
 static const float MIN_PLANE_G = 0.4f;       // below this, X/Z cannot define roll (forearm near vertical)
 static const uint32_t DIP_MAX_MS = 700;      // one dip: out and back within this
 static const uint32_t HELP_WINDOW_MS = 2000; // both dips within this
-// YES: the IMU's hardware double tap, with the wrist not tilted. No stillness requirement; a short wait lets
-// a shake (whose jolts can look like taps) win as NO.
+// YES: a double tap, with the wrist not tilted. A short wait lets a shake (whose jolts look like taps) win as NO.
+// Recorded on a real band (2026-11-05), the IMU's hardware double-tap flag never fired while each finger tap showed
+// as a 2.9-3.2 g one-sample spike after a still wrist, so taps are also found in software from those spikes.
 static const uint32_t TAP_CONFIRM_MS = 150;
+static const float TAP_SPIKE_G = 1.8f;          // |a| above this = an impact
+static const float TAP_QUIET_DPS = 60.0f;       // the wrist was not moving just before the first tap
+static const uint32_t TAP_GAP_MIN_MS = 100, TAP_GAP_MAX_MS = 700;   // second tap after the first
+// NO: three alternating fast wrist rotations within this window (0.9 s missed wide, slow shakes on a real wrist).
+#ifndef SHAKE_WINDOW_MS_VALUE
+#define SHAKE_WINDOW_MS_VALUE 1500
+#endif
+static const uint32_t SHAKE_WINDOW_MS = SHAKE_WINDOW_MS_VALUE;
+// HELP also accepts one big sweep through neutral: forearm past -PITCH_ENTER_DEG and past +PITCH_ENTER_DEG (either
+// order) within HELP_WINDOW_MS, which is how "lower it, then raise it" was done on a real wrist.
+#ifndef HELP_SWEEP_VALUE
+#define HELP_SWEEP_VALUE true
+#endif
+static const bool HELP_SWEEP = HELP_SWEEP_VALUE;
 
 enum class Gesture { None, Water, Food, No, Yes, Help };
 
@@ -101,6 +116,16 @@ struct Orientation {
         for (int i = 0; i < 3; ++i) { m[0][i] = x[i]; m[1][i] = y[i]; m[2][i] = z[i]; }
         return true;
     }
+    // gu = gravity with the hand raised (forearm tipped up at the elbow), board coordinates. Points band +Y
+    // toward the hand so "hand up" is positive pitch; the tilts alone cannot tell the forearm's direction.
+    bool setForward(const float* gu) {
+        float d[3] = {gu[0], gu[1], gu[2]};
+        float pz = dot(d, m[2]), px = dot(d, m[0]);
+        for (int i = 0; i < 3; ++i) d[i] -= pz * m[2][i] + px * m[0][i];
+        if (sqrtf(dot(d, d)) < 0.25f) return false;                  // too small (< ~15 deg) or mostly a tilt
+        if (dot(d, m[1]) < 0) for (int i = 0; i < 3; ++i) m[1][i] = -m[1][i];
+        return true;
+    }
 };
 
 class GestureDetector {
@@ -108,7 +133,9 @@ class GestureDetector {
     bool initialized = false, armed = false, neutralTiming = false;
     uint32_t neutralAt = 0, lastEmission = 0, candidateAt = 0;
     uint32_t lastMotion = 0, shakeStart = 0, pulseAt = 0;
-    uint32_t tapAt = 0, dipStart = 0, firstDipAt = 0;
+    uint32_t tapAt = 0, dipStart = 0, firstDipAt = 0, spikeAt = 0, lowAt = 0, highAt = 0;
+    int quietRun = 0;
+    bool spikeOpen = false, inSpike = false;
     int candidate = 0, shakeSign = 0, shakePulses = 0;
     int dipDir = 0, pairDir = 0, dips = 0;
     bool cooling = false, tapPending = false;
@@ -122,6 +149,7 @@ class GestureDetector {
     Gesture emit(Gesture result, uint32_t now) {
         armed = false; neutralTiming = false; cooling = true; lastEmission = now;
         candidate = 0; shakePulses = 0; shakeSign = 0; tapPending = false; dipDir = dips = 0;
+        spikeOpen = false; lowAt = highAt = 0;
         return result;
     }
 public:
@@ -139,10 +167,11 @@ public:
         pitchBaseline = pitchAngle(x, y, z); filteredPitch = 0;
         armed = false; neutralTiming = false; cooling = false; tapPending = false;
         candidate = 0; shakePulses = 0; shakeSign = 0; lastMotion = now; dipDir = dips = 0;
+        spikeOpen = inSpike = false; quietRun = 0; lowAt = highAt = 0;
     }
     void disarm() {
         armed = false; neutralTiming = false; candidate = 0; shakePulses = 0; shakeSign = 0; tapPending = false;
-        dipDir = dips = 0;
+        dipDir = dips = 0; spikeOpen = false; lowAt = highAt = 0;
     }
 
     // doubleTap: the IMU's hardware double-tap flag for this sample (latched, read once per sample).
@@ -164,6 +193,17 @@ public:
         // Shocks (|a| far from 1 g) say nothing about the forearm angle and must not fake a HELP dip.
         if (magnitude > 0.5f && magnitude < 1.5f) filteredPitch += 0.22f * ((pitchAngle(x, y, z) - pitchBaseline) - filteredPitch);
         if (speed > 70 || magnitude < 0.8f || magnitude > 1.2f) lastMotion = now;
+        // Software double tap: a spike after >= 100 ms of a still wrist opens a pair, a second spike 0.1-0.7 s later
+        // closes it. Each spike counts once, however many samples it spans.
+        bool spike = magnitude > TAP_SPIKE_G, newSpike = spike && !inSpike;
+        inSpike = spike;
+        if (spikeOpen && uint32_t(now - spikeAt) > TAP_GAP_MAX_MS) spikeOpen = false;
+        if (newSpike) {
+            uint32_t gap = uint32_t(now - spikeAt);
+            if (spikeOpen && gap >= TAP_GAP_MIN_MS) { doubleTap = true; spikeOpen = false; }
+            else if (!spikeOpen && quietRun >= 5) { spikeOpen = true; spikeAt = now; }
+        }
+        quietRun = speed < TAP_QUIET_DPS && !spike ? quietRun + 1 : 0;
         if (cooling && uint32_t(now - lastEmission) >= COOLDOWN_MS) cooling = false;
         if (!armed) {
             // v0.4.0 rule: only the left/right tilt has to be back near neutral (pitch is free).
@@ -177,7 +217,7 @@ public:
         }
         // NO (v0.4.0): three alternating fast rotations on Y within 900 ms.
         // Any rapid motion cancels a tilt candidate, so shaking cannot also emit FOOD/WATER.
-        if (shakePulses && uint32_t(now - shakeStart) > 900) { shakePulses = 0; shakeSign = 0; }
+        if (shakePulses && uint32_t(now - shakeStart) > SHAKE_WINDOW_MS) { shakePulses = 0; shakeSign = 0; }
         int sign = gy > SHAKE_DPS ? 1 : gy < -SHAKE_DPS ? -1 : 0;
         if (sign && sign != shakeSign && (!shakePulses || uint32_t(now - pulseAt) >= 80)) {
             if (!shakePulses) shakeStart = now;
@@ -198,6 +238,10 @@ public:
         // HELP: two quick dips the same way, out past PITCH_ENTER_DEG and back under PITCH_EXIT_DEG, each within
         // DIP_MAX_MS, both within HELP_WINDOW_MS. A held pitch (hand to mouth, forearm on the lap) is not a dip.
         float roll = fabsf(filtered), pitch = fabsf(filteredPitch);
+        if (HELP_SWEEP && pitch > PITCH_ENTER_DEG && pitch >= roll + AXIS_MARGIN_DEG) {
+            if (filteredPitch < 0) lowAt = now; else highAt = now;
+            if (lowAt && highAt && (lowAt > highAt ? lowAt - highAt : highAt - lowAt) <= HELP_WINDOW_MS) return emit(Gesture::Help, now);
+        }
         if (dips && uint32_t(now - firstDipAt) > HELP_WINDOW_MS) dips = 0;
         if (!dipDir) {
             if (pitch > PITCH_ENTER_DEG && pitch >= roll + AXIS_MARGIN_DEG) {
