@@ -70,6 +70,13 @@ $('compatibility').textContent = supported
   : 'Trình duyệt này chưa hỗ trợ. Hãy mở trang bằng Chrome hoặc Edge trên máy tính qua HTTPS.';
 $('compatibility').classList.toggle('error', !supported);
 $('model-confirm').addEventListener('change', updateControls);
+// The public page offers only the regular Sense (it is sent to customers). The team's Sense Plus is flashed from
+// the unlisted link ?plus, which shows the board selector with both variants.
+if (!new URLSearchParams(location.search).has('plus')) {
+  $('board-select').querySelector('option[value="plus"]')?.remove();
+  $('board-select').hidden = true;
+  document.querySelector('label[for="board-select"]').hidden = true;
+}
 $('board-select').addEventListener('change', () => {
   if (busy || selectedPort) return;
   board = BOARDS[$('board-select').value];
