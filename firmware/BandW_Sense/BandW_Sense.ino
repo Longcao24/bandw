@@ -71,15 +71,18 @@ void saveOrientation() {
 
 // ---- Calibration ----
 // Quick (power-on): hold still 2 s -> neutral pose, using the saved orientation.
-// Full (app button / 'c'): hold still -> tilt LEFT and hold -> tilt RIGHT and hold. Finds which board axis is
-// left/right and which is "up", saves that orientation, then uses the held-still pose as neutral.
-// The control characteristic reports each step: CALIBRATING, CAL_LEFT, CAL_RIGHT, then READY
-// (CAL_SKIPPED first if a tilt step timed out: the previous orientation is kept).
-enum CalStep : uint8_t { CAL_OFF, CAL_HOLD, CAL_LEFT, CAL_RIGHT };
+// Full (app button / 'c'): hold still -> tilt LEFT and hold -> tilt RIGHT and hold -> RAISE the hand and hold.
+// Finds which board axis is left/right, which is "up" and which way the forearm points, saves that orientation,
+// then uses the held-still pose as neutral.
+// The control characteristic reports each step: CALIBRATING, CAL_LEFT, CAL_RIGHT, CAL_UP, then READY
+// (CAL_SKIPPED first if a tilt step timed out: the previous orientation is kept; if only the raise step times
+// out, the left/right result is kept with the forearm direction guessed).
+enum CalStep : uint8_t { CAL_OFF, CAL_HOLD, CAL_LEFT, CAL_RIGHT, CAL_UP };
 CalStep calStep = CAL_OFF;
 bool fullCal = false;
 uint32_t calStepAt = 0;
 float calG0[3], calGL[3];
+Orientation calOrient;
 Calibrator tiltCal;
 const uint32_t TILT_STEP_MS = 20000;
 const float TILT_MIN_DEG = 15.0f;
@@ -89,7 +92,7 @@ void resetCalibration(bool full) {
     fullCal = full; calStep = CAL_HOLD; calStepAt = millis();
     calibrator.checkPlane = !full;   // full: raw board axes, orientation still unknown
     controlCharacteristic.writeValue("CALIBRATING");
-    log(full ? "CALIBRATE 1/3: hold wrist still in neutral pose for 2 s." : "CALIBRATE: hold wrist still in neutral pose for 2 s.");
+    log(full ? "CALIBRATE 1/4: hold wrist still in neutral pose for 2 s." : "CALIBRATE: hold wrist still in neutral pose for 2 s.");
 }
 void finishCalibration(float x, float y, float z, uint32_t now) {   // x, y, z = neutral gravity in the band frame
     detector.calibrate(x, y, z, now);
@@ -97,6 +100,7 @@ void finishCalibration(float x, float y, float z, uint32_t now) {   // x, y, z =
     controlCharacteristic.writeValue("READY");
     log("CALIBRATED: L=WATER R=FOOD shake=NO 2tap=YES 2dip=HELP");
 }
+void commitOrientation(uint32_t now);
 // Raw board-frame sample during calibration. Returns when done or still collecting.
 void calibrationStep(float x, float y, float z, float gx, float gy, float gz, uint32_t now) {
     if (calStep == CAL_HOLD) {
@@ -106,8 +110,13 @@ void calibrationStep(float x, float y, float z, float gx, float gy, float gz, ui
         for (int i = 0; i < 3; ++i) calG0[i] = g[i];
         calStep = CAL_LEFT; calStepAt = now; tiltCal.reset(); tiltCal.samples = 25; tiltCal.checkPlane = false;
         controlCharacteristic.writeValue("CAL_LEFT");
-        log("CALIBRATE 2/3: tilt the wrist LEFT and hold.");
+        log("CALIBRATE 2/4: tilt the wrist LEFT and hold.");
         return;
+    }
+    if (calStep == CAL_UP && uint32_t(now - calStepAt) > TILT_STEP_MS) {   // no raise: keep left/right, guess forearm
+        controlCharacteristic.writeValue("CAL_SKIPPED");
+        log("CALIBRATE: raise step timed out, forearm direction guessed.");
+        commitOrientation(now); return;
     }
     if (uint32_t(now - calStepAt) > TILT_STEP_MS) {      // gave up on the tilts: keep the previous orientation
         controlCharacteristic.writeValue("CAL_SKIPPED");
@@ -122,12 +131,22 @@ void calibrationStep(float x, float y, float z, float gx, float gy, float gz, ui
         for (int i = 0; i < 3; ++i) calGL[i] = g[i];
         calStep = CAL_RIGHT; calStepAt = now;
         controlCharacteristic.writeValue("CAL_RIGHT");
-        log("CALIBRATE 3/3: tilt the wrist RIGHT and hold.");
+        log("CALIBRATE 3/4: tilt the wrist RIGHT and hold.");
         return;
     }
-    Orientation o;
-    if (!o.fromTilts(calG0, calGL, g)) return;                         // same side as LEFT: keep waiting
-    orient = o; saveOrientation();
+    if (calStep == CAL_RIGHT) {
+        Orientation o;
+        if (!o.fromTilts(calG0, calGL, g)) return;                     // same side as LEFT: keep waiting
+        calOrient = o; calStep = CAL_UP; calStepAt = now;
+        controlCharacteristic.writeValue("CAL_UP");
+        log("CALIBRATE 4/4: raise the hand (bend at the elbow) and hold.");
+        return;
+    }
+    if (!calOrient.setForward(g)) return;                              // a tilt, or too small: keep waiting
+    commitOrientation(now);
+}
+void commitOrientation(uint32_t now) {
+    Orientation o = calOrient; orient = o; saveOrientation();
     log("ORIENTATION saved: X=(" + String(o.m[0][0], 2) + "," + String(o.m[0][1], 2) + "," + String(o.m[0][2], 2) + ") Y=("
         + String(o.m[1][0], 2) + "," + String(o.m[1][1], 2) + "," + String(o.m[1][2], 2) + ")");
     float n[3] = {calG0[0], calG0[1], calG0[2]}; orient.apply(n[0], n[1], n[2]);

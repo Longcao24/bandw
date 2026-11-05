@@ -101,6 +101,16 @@ struct Orientation {
         for (int i = 0; i < 3; ++i) { m[0][i] = x[i]; m[1][i] = y[i]; m[2][i] = z[i]; }
         return true;
     }
+    // gu = gravity with the hand raised (forearm tipped up at the elbow), board coordinates. Points band +Y
+    // toward the hand so "hand up" is positive pitch; the tilts alone cannot tell the forearm's direction.
+    bool setForward(const float* gu) {
+        float d[3] = {gu[0], gu[1], gu[2]};
+        float pz = dot(d, m[2]), px = dot(d, m[0]);
+        for (int i = 0; i < 3; ++i) d[i] -= pz * m[2][i] + px * m[0][i];
+        if (sqrtf(dot(d, d)) < 0.25f) return false;                  // too small (< ~15 deg) or mostly a tilt
+        if (dot(d, m[1]) < 0) for (int i = 0; i < 3; ++i) m[1][i] = -m[1][i];
+        return true;
+    }
 };
 
 class GestureDetector {

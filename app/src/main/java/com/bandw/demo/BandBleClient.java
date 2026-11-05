@@ -312,17 +312,20 @@ final class BandBleClient {
         } else if ("CAL_LEFT".equals(state)) {
             // Firmware 0.6.0+: 3-step calibration (hold still -> tilt left -> tilt right) finds how the board sits.
             calibrating = true;
-            listener.calibration(false, "Bước 2/3: nghiêng cổ tay sang TRÁI khoảng 30–45° rồi giữ yên.");
+            listener.calibration(false, "Bước 2/4: nghiêng cổ tay sang TRÁI khoảng 30–45° rồi giữ yên.");
         } else if ("CAL_RIGHT".equals(state)) {
             calibrating = true;
-            listener.calibration(false, "Bước 3/3: nghiêng cổ tay sang PHẢI khoảng 30–45° rồi giữ yên.");
+            listener.calibration(false, "Bước 3/4: nghiêng cổ tay sang PHẢI khoảng 30–45° rồi giữ yên.");
+        } else if ("CAL_UP".equals(state)) {
+            calibrating = true;
+            listener.calibration(false, "Bước 4/4: giữ khuỷu tay, nâng bàn tay lên khoảng 30–45° rồi giữ yên.");
         } else if ("CAL_SKIPPED".equals(state)) {
-            listener.calibration(false, "Không thấy nghiêng trái/phải: giữ hướng cũ, đang hoàn tất…");
+            listener.calibration(false, "Một bước chưa xong: giữ phần đã đo, đang hoàn tất…");
         }
     }
     private void waitingForCalibration() {
         calibrating = true;
-        listener.calibration(false, "Bước 1/3: giữ tay yên ở tư thế bình thường (mu bàn tay hướng lên) khoảng 2 giây.");
+        listener.calibration(false, "Bước 1/4: giữ tay yên ở tư thế bình thường (mu bàn tay hướng lên) khoảng 2 giây.");
         if (calibrationTimeout != null) handler.removeCallbacks(calibrationTimeout);
         final int session = generation;
         // Non-fatal: keep the link; a later READY still completes calibration.

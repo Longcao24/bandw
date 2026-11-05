@@ -191,6 +191,7 @@ int main() {
             {{{0,1,0},{-1,0,0},{0,0,1}}},     // turned 90 deg in the strap
             {{{-1,0,0},{0,-1,0},{0,0,1}}},    // turned 180 deg
             {{{0,-1,0},{-1,0,0},{0,0,-1}}},   // flipped over and turned
+            {{{-1,0,0},{0,1,0},{0,0,-1}}},    // flipped over (left-handed reading: tilts alone get the forearm wrong)
         };
         for (const Mount& mt : mounts) {
             // gravity (band frame) for neutral, left 30 deg, right 30 deg -> board readings
@@ -199,12 +200,13 @@ int main() {
             float s30 = sinf(30/57.2957795f), c30 = cosf(30/57.2957795f);
             float g0[3], gl[3], gr[3]; toBoard(0,0,1,g0); toBoard(-s30,0,c30,gl); toBoard(s30,0,c30,gr);
             Orientation o; assert(o.fromTilts(g0, gl, gr));
+            float gu[3]; toBoard(0, s30, c30, gu); assert(o.setForward(gu));   // step 4: hand raised = +Y
             // a right tilt of 40 deg reads as +X; forearm pitch reads on Y only
             float v[3]; float s40 = sinf(40/57.2957795f), c40 = cosf(40/57.2957795f);
             toBoard(s40, 0, c40, v); o.apply(v[0], v[1], v[2]);
             assert(fabsf(v[0]-s40) < 1e-3f && fabsf(v[1]) < 1e-3f && fabsf(v[2]-c40) < 1e-3f);
             toBoard(0, s40, c40, v); o.apply(v[0], v[1], v[2]);
-            assert(fabsf(v[0]) < 1e-3f && fabsf(fabsf(v[1])-s40) < 1e-3f);
+            assert(fabsf(v[0]) < 1e-3f && fabsf(v[1]-s40) < 1e-3f);   // hand up reads as POSITIVE pitch
             // end to end: with the orientation applied, a left tilt of the turned board is WATER
             GestureDetector d; float n[3] = {g0[0], g0[1], g0[2]}; o.apply(n[0], n[1], n[2]);
             uint32_t t = 0; d.calibrate(n[0], n[1], n[2], t); std::vector<Gesture> ev;
@@ -217,6 +219,8 @@ int main() {
         // Unusable tilts (both to the same side, or too small) are refused and leave the orientation alone.
         float g0[3] = {0,0,1}, a[3] = {0.5f,0,0.87f}, b[3] = {0.4f,0,0.92f}, tiny[3] = {-0.1f,0,0.99f};
         Orientation o; assert(!o.fromTilts(g0, a, b)); assert(!o.fromTilts(g0, tiny, a)); assert(o.identity());
+        float sideways[3] = {0.5f, 0.05f, 0.86f};   // a "raise" that is really a tilt is refused
+        assert(!o.setForward(sideways)); assert(o.identity());
     }
 
     // Calibrator: tolerant of a few jittery samples, rejects a pose it cannot use.

@@ -8,3 +8,4 @@ local.properties
 releases/
 *.keystore
 *.jks
+research-tools/live-logs/

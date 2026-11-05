@@ -147,7 +147,15 @@ const N = 500; // 10 s at 50 Hz
 const buf = { roll: new Float32Array(N), pitch: new Float32Array(N), gy: new Float32Array(N), tap: new Uint8Array(N), ev: new Uint8Array(N) };
 let head = 0, filled = 0, lastSeq = -1, lost = 0, rateCount = 0, latest = null;
 let recording = false, rows = [];
-function log(msg) { const d = new Date(); const line = document.createElement('div'); line.textContent = `${d.toLocaleTimeString()}  ${msg}`; $('log').prepend(line); }
+// Served from localhost by research-tools/live_server.py: stream everything to that server so a developer can
+// read the band live. The public site never posts anything.
+const LOCAL = ['localhost', '127.0.0.1'].includes(location.hostname);
+const outSamples = [], outEvents = [];
+if (LOCAL) setInterval(() => {
+  if (outSamples.length) fetch('/ingest/samples', { method: 'POST', body: outSamples.splice(0).join('\n') }).catch(() => {});
+  if (outEvents.length) fetch('/ingest/events', { method: 'POST', body: JSON.stringify(outEvents.splice(0)) }).catch(() => {});
+}, 300);
+function log(msg) { const d = new Date(); const line = document.createElement('div'); line.textContent = `${d.toLocaleTimeString()}  ${msg}`; $('log').prepend(line); if (LOCAL) outEvents.push(msg); }
 
 function onSample(s) {
   if (lastSeq >= 0) { const gap = (s.seq - lastSeq - 1 + 65536) % 65536; if (gap < 1000) lost += gap; }
@@ -155,6 +163,7 @@ function onSample(s) {
   buf.roll[head] = s.roll; buf.pitch[head] = s.pitch; buf.gy[head] = s.gy; buf.tap[head] = s.tap; buf.ev[head] = s.event;
   head = (head + 1) % N; filled = Math.min(N, filled + 1);
   latest = s;
+  if (LOCAL) outSamples.push([Math.round(performance.now()), s.seq, session ? session.label : $('label').value, s.ax, s.ay, s.az, s.gx, s.gy, s.gz, s.tap, s.state & 1, (s.state >> 1) & 1, (s.state >> 2) & 1, (s.state >> 3) & 1, (s.state >> 4) & 1, s.event, s.roll.toFixed(1), s.pitch.toFixed(1)].join(','));
   if (s.event) showEvent(s.event);
   if (s.tap) { const c = $('tapChip'); c.classList.add('on'); setTimeout(() => c.classList.remove('on'), 500); }
   if (recording) rows.push([Math.round(performance.now()), s.seq, session ? session.label : $('label').value, session ? session.person : ($('person').value.trim() || ''), session ? session.step : '', s.ax, s.ay, s.az, s.gx, s.gy, s.gz, s.tap, s.state & 1, (s.state >> 1) & 1, (s.state >> 2) & 1, (s.state >> 3) & 1, (s.state >> 4) & 1, s.event, s.roll.toFixed(1), s.pitch.toFixed(1)]);
@@ -206,11 +215,12 @@ async function connect() {
   }
 }
 $('connect').addEventListener('click', connect);
-// 3-step calibration prompts from the band (firmware 0.6.0+): CALIBRATING -> CAL_LEFT -> CAL_RIGHT -> READY.
+// Calibration prompts from the band (firmware 0.6.1+): CALIBRATING -> CAL_LEFT -> CAL_RIGHT -> CAL_UP -> READY.
 const CAL = {
-  CALIBRATING: ['BƯỚC 1/3', 'GIỮ TAY YÊN', 'Đặt tay ở tư thế bình thường khi dùng (mu bàn tay hướng lên), giữ yên khoảng 2 giây.'],
-  CAL_LEFT: ['BƯỚC 2/3', 'NGHIÊNG TRÁI', 'Nghiêng cổ tay sang TRÁI khoảng 30–45° rồi giữ yên ở đó.'],
-  CAL_RIGHT: ['BƯỚC 3/3', 'NGHIÊNG PHẢI', 'Nghiêng cổ tay sang PHẢI khoảng 30–45° rồi giữ yên ở đó.'],
+  CALIBRATING: ['BƯỚC 1/4', 'GIỮ TAY YÊN', 'Đặt tay ở tư thế bình thường khi dùng (mu bàn tay hướng lên), giữ yên khoảng 2 giây.'],
+  CAL_LEFT: ['BƯỚC 2/4', 'NGHIÊNG TRÁI', 'Nghiêng cổ tay sang TRÁI khoảng 30–45° rồi giữ yên ở đó.'],
+  CAL_RIGHT: ['BƯỚC 3/4', 'NGHIÊNG PHẢI', 'Nghiêng cổ tay sang PHẢI khoảng 30–45° rồi giữ yên ở đó.'],
+  CAL_UP: ['BƯỚC 4/4', 'NÂNG BÀN TAY LÊN', 'Giữ khuỷu tay, nâng bàn tay lên khoảng 30–45° (cổ tay không nghiêng) rồi giữ yên.'],
 };
 let calOverlay = false;
 function calState(t) {
@@ -222,7 +232,7 @@ function calState(t) {
     $('gstop').textContent = 'Ẩn'; $('guide').classList.add('show'); calOverlay = true; beep(t === 'CALIBRATING' ? 520 : 880, 200);
     $('status').textContent = `Đang hiệu chuẩn · ${step}`;
   }
-  if (t === 'CAL_SKIPPED') log('Không thấy nghiêng trái/phải trong 20 giây: giữ hướng trục cũ.');
+  if (t === 'CAL_SKIPPED') log('Một bước hiệu chuẩn quá 20 giây chưa xong: giữ phần đã đo được.');
   if (t === 'READY') {
     $('status').textContent = '● Đã kết nối · Đã hiệu chuẩn';
     if (calOverlay) { calOverlay = false; $('guide').classList.remove('show'); $('gstop').textContent = 'Dừng phiên (vẫn lưu phần đã ghi)'; beep(1200, 120); }
