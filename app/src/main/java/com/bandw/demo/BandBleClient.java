@@ -33,6 +33,8 @@ final class BandBleClient {
     static final UUID SERVICE = UUID.fromString("c91b0001-7d7a-4f8c-9d29-6e44c786a321");
     static final UUID COMMAND = UUID.fromString("c91b0002-7d7a-4f8c-9d29-6e44c786a321");
     static final UUID CONTROL = UUID.fromString("c91b0003-7d7a-4f8c-9d29-6e44c786a321");
+    /** Firmware 0.6.3+: READY / COOLDOWN / WAIT_REST / CALIB, notified when it changes. Optional. */
+    static final UUID STATE = UUID.fromString("c91b0005-7d7a-4f8c-9d29-6e44c786a321");
     private static final UUID CCCD = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
     private static final String TAG = "BandW";
     private static final int SCAN_MS = 8000, CONNECT_MS = 15000, CALIBRATION_MS = 70000, SLOW_RETRY_MS = 30000;
@@ -42,6 +44,8 @@ final class BandBleClient {
         void status(String text);
         void command(String command);
         void calibration(boolean enabled, String text);
+        /** Band readiness (READY, COOLDOWN, WAIT_REST, CALIB), or null when unknown (old firmware / no link). */
+        void bandState(String state);
         /** True while the user wants the band connected (connecting, connected or reconnecting). */
         void link(boolean active, boolean connected);
     }
@@ -55,7 +59,7 @@ final class BandBleClient {
     private BluetoothDevice device;
     private AlertDialog picker;
     private boolean ready, calibrationAvailable, calibrating, wanted, startWhenEnabled, askedNotifications, released;
-    private BluetoothGattCharacteristic control;
+    private BluetoothGattCharacteristic control, state;
     private int generation, retries;
     private Runnable timeout, calibrationTimeout, retry;
     private final BroadcastReceiver adapterState = new BroadcastReceiver() {
@@ -218,12 +222,22 @@ final class BandBleClient {
                     dispatch(source, () -> {
                         if (!CCCD.equals(descriptor.getUuid())) return;
                         if (status != BluetoothGatt.GATT_SUCCESS) { linkLost("cccd", status); return; }
-                        if (COMMAND.equals(descriptor.getCharacteristic().getUuid())) {
-                            control = source.getService(SERVICE).getCharacteristic(CONTROL);
+                        UUID subscribed = descriptor.getCharacteristic().getUuid();
+                        BluetoothGattService service = source.getService(SERVICE);
+                        if (COMMAND.equals(subscribed)) {
+                            control = service.getCharacteristic(CONTROL);
                             if (control != null && (control.getProperties() & BluetoothGattCharacteristic.PROPERTY_WRITE) != 0) {
                                 if (!subscribe(source, control)) linkLost("subscribe-control", -1);
                                 return;
                             }
+                        }
+                        if (COMMAND.equals(subscribed) || CONTROL.equals(subscribed)) {
+                            state = service.getCharacteristic(STATE);
+                            if (state != null && (state.getProperties() & BluetoothGattCharacteristic.PROPERTY_NOTIFY) != 0) {
+                                if (!subscribe(source, state)) linkLost("subscribe-state", -1);
+                                return;
+                            }
+                            state = null;
                         }
                         ready = true;
                         retries = 0;
@@ -231,7 +245,7 @@ final class BandBleClient {
                         source.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_BALANCED);
                         listener.status("● Đã kết nối BandW-Sense");
                         listener.link(true, true);
-                        calibrationAvailable = CONTROL.equals(descriptor.getCharacteristic().getUuid());
+                        calibrationAvailable = control != null && (control.getProperties() & BluetoothGattCharacteristic.PROPERTY_WRITE) != 0;
                         if (calibrationAvailable) {
                             listener.calibration(false, "Đang đọc trạng thái vòng tay…");
                             if (!source.readCharacteristic(control)) listener.calibration(true, "Chưa đọc được trạng thái · Có thể bấm Hiệu chuẩn");
@@ -242,6 +256,7 @@ final class BandBleClient {
                     if (value == null) return;
                     final String text = new String(value, StandardCharsets.US_ASCII).trim();
                     dispatch(source, () -> {
+                        if (STATE.equals(characteristic.getUuid())) { listener.bandState(text); return; }
                         if (CONTROL.equals(characteristic.getUuid())) { calibrationState(text); return; }
                         if (!ready || !COMMAND.equals(characteristic.getUuid()) || GestureCommand.parse(text) == null) return;
                         // Firmware only sends gestures once calibrated, so a gesture means READY was missed.
@@ -251,6 +266,8 @@ final class BandBleClient {
                 }
                 @Override public void onCharacteristicRead(BluetoothGatt source, BluetoothGattCharacteristic characteristic, byte[] value, int status) {
                     if (status == BluetoothGatt.GATT_SUCCESS) notification(source, characteristic, value);
+                    // After the calibration state, read the readiness once (later changes arrive as notifications).
+                    if (CONTROL.equals(characteristic.getUuid()) && state != null) dispatch(source, () -> { if (gatt == source && state != null) source.readCharacteristic(state); });
                     else dispatch(source, () -> listener.calibration(true, "Chưa đọc được trạng thái · Có thể bấm Hiệu chuẩn"));
                 }
                 @Override public void onCharacteristicRead(BluetoothGatt source, BluetoothGattCharacteristic characteristic, int status) {
@@ -362,7 +379,8 @@ final class BandBleClient {
         generation++;
         boolean wasReady = ready;
         ready = false;
-        calibrationAvailable = false; calibrating = false; control = null;
+        calibrationAvailable = false; calibrating = false; control = null; state = null;
+        listener.bandState(null);
         if (calibrationTimeout != null) handler.removeCallbacks(calibrationTimeout);
         if (retry != null) handler.removeCallbacks(retry);
         listener.calibration(false, "Kết nối vòng tay để hiệu chuẩn.");

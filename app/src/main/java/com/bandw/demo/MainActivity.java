@@ -12,6 +12,7 @@ import android.media.AudioManager;
 import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
+import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -36,7 +37,9 @@ public class MainActivity extends Activity {
     private GestureCommand current;
     private boolean speechReady, destroyed, bandConnected, autoSpeak = true;
     private BandBleClient ble;
-    private TextView connectionStatus, calibrationStatus;
+    private TextView connectionStatus, calibrationStatus, readiness;
+    private String bandState;
+    private boolean calibrationGuide;
     private Button calibrate;
     private int speechGeneration;
     private String activeUtterance;
@@ -64,6 +67,24 @@ public class MainActivity extends Activity {
                 calibrate.setEnabled(enabled);
                 calibrate.setAlpha(enabled ? 1f : 0.45f);
                 calibrationStatus.setText(value);
+                // 4-step calibration: show each step big and read it aloud, so the user can follow it without
+                // looking at the phone while tilting the wrist.
+                if (!enabled && value.startsWith("Bước")) {
+                    calibrationGuide = true;
+                    showReadiness("HIỆU CHUẨN · " + value, "#DCE8F6", "#1F4E79");
+                    speakInfo(value.replace("30–45°", "30 đến 45 độ"));
+                } else if (calibrationGuide && enabled) {
+                    calibrationGuide = false;
+                    if (value.startsWith("Đã hiệu chuẩn")) speakInfo("Đã hiệu chuẩn xong.");
+                    renderReadiness();
+                }
+            }
+            public void bandState(String state) {
+                String previous = bandState;
+                bandState = state;
+                if (!calibrationGuide) renderReadiness();
+                if ("READY".equals(state) && previous != null && !"READY".equals(previous) && !"CALIB".equals(previous))
+                    readiness.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
             }
             public void command(String value) {
                 if (!demoMode) { receiveCommand(value, "Vòng tay"); return; }
@@ -76,6 +97,8 @@ public class MainActivity extends Activity {
                 if (active) getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                 else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                 BandLinkService.update(MainActivity.this, active, connected ? "Đã kết nối BandW-Sense" : "Đang kết nối lại vòng tay…");
+                if (!connected) { bandState = null; calibrationGuide = false; }
+                renderReadiness();
                 if (current == null) applyMode();
             }
         });
@@ -124,6 +147,14 @@ public class MainActivity extends Activity {
         calibrationStatus = text("Kết nối rồi giữ tay yên để hiệu chuẩn.", 13, false);
         calibrationStatus.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         add(devicePanel, calibrationStatus, 8);
+
+        // Big readiness banner: tells the user when the band will take the next gesture, so nobody keeps waving at a
+        // band that is still cooling down or waiting for the wrist to come back to rest.
+        readiness = text("", 20, true);
+        readiness.setPadding(dp(18), dp(16), dp(18), dp(16));
+        readiness.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        readiness.setVisibility(View.GONE);
+        add(page, readiness, 16);
 
         LinearLayout message = column();
         message.setPadding(dp(22), dp(22), dp(22), dp(22));
@@ -194,6 +225,31 @@ public class MainActivity extends Activity {
         applyMode();
     }
 
+    private void showReadiness(String text, String fill, String color) {
+        readiness.setText(text);
+        readiness.setTextColor(Color.parseColor(color));
+        readiness.setBackground(background(fill, 20));
+        readiness.setVisibility(View.VISIBLE);
+    }
+
+    private void renderReadiness() {
+        if (readiness == null) return;
+        if (demoMode || !bandConnected || bandState == null) { readiness.setVisibility(View.GONE); return; }
+        switch (bandState) {
+            case "READY": showReadiness("● SẴN SÀNG\nLàm cử chỉ ngay bây giờ.", "#D5F28B", "#173E29"); break;
+            case "COOLDOWN": showReadiness("● VỪA NHẬN CỬ CHỈ\nChờ một chút…", "#F6E3B4", "#6B4A00"); break;
+            case "WAIT_REST": showReadiness("● CHƯA SẴN SÀNG\nĐưa tay về tư thế nghỉ, giữ yên một chút.", "#F6E3B4", "#6B4A00"); break;
+            case "CALIB": showReadiness("● ĐANG HIỆU CHUẨN", "#DCE8F6", "#1F4E79"); break;
+            default: readiness.setVisibility(View.GONE);
+        }
+    }
+
+    /** Reads a short instruction aloud (calibration steps); a gesture phrase later simply replaces it. */
+    private void speakInfo(String text) {
+        if (!speechReady || speech == null) return;
+        speech.speak(text, TextToSpeech.QUEUE_FLUSH, null, "info-" + System.nanoTime());
+    }
+
     /** With auto-speak on, TTS already reads the phrase; a live region would make TalkBack read it twice. */
     private void phraseLiveRegion() {
         phraseView.setAccessibilityLiveRegion(autoSpeak ? View.ACCESSIBILITY_LIVE_REGION_NONE : View.ACCESSIBILITY_LIVE_REGION_POLITE);
@@ -211,6 +267,7 @@ public class MainActivity extends Activity {
         demoToggle.setText(demoMode ? "← Vòng tay" : "Demo");
         demoToggle.setContentDescription(demoMode ? "Thoát Demo mode" : "Vào Demo mode");
         demoPanel.setVisibility(demoMode ? View.VISIBLE : View.GONE);
+        renderReadiness();
         devicePanel.setVisibility(demoMode ? View.GONE : View.VISIBLE);
         if (current == null) {
             phraseView.setText(demoMode ? "Bạn muốn nói\nđiều gì?" : "Sẵn sàng\nlắng nghe.");

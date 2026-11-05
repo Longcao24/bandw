@@ -13,6 +13,12 @@ BLEStringCharacteristic controlCharacteristic("c91b0003-7d7a-4f8c-9d29-6e44c786a
 // is subscribed; the Android app never subscribes, so normal use is unchanged.
 // Layout (little endian): u16 seq · i16 ax,ay,az (mg) · i16 gx,gy,gz (0.1 dps) · u8 flags (bit0 hardware double
 // tap) · u8 event (0 none, 1 WATER, 2 FOOD, 3 NO, 4 YES, 5 HELP) · i16 roll, pitch (0.1 deg, filtered, vs calibration)
+// Readiness for the app (firmware 0.6.3+): READY = the next gesture will be recognised; COOLDOWN = a gesture was
+// just recognised; WAIT_REST = bring the wrist back to the rest pose and hold it a moment; CALIB = calibrating.
+// Notified only when it changes. A separate characteristic so older apps (which read c91b0003) are unaffected.
+BLEStringCharacteristic stateCharacteristic("c91b0005-7d7a-4f8c-9d29-6e44c786a321", BLERead | BLENotify, 12);
+const char* lastState = "";
+void publishState(const char* s) { if (strcmp(s, lastState)) { lastState = s; stateCharacteristic.writeValue(s); } }
 BLECharacteristic rawCharacteristic("c91b0004-7d7a-4f8c-9d29-6e44c786a321", BLENotify, 20, true);
 uint16_t rawSeq = 0;
 LSM6DS3 imu(I2C_MODE, 0x6A);
@@ -201,6 +207,8 @@ void setup() {
     gestureService.addCharacteristic(gestureCharacteristic);
     gestureService.addCharacteristic(controlCharacteristic);
     gestureService.addCharacteristic(rawCharacteristic);
+    gestureService.addCharacteristic(stateCharacteristic);
+    stateCharacteristic.writeValue("CALIB");
     BLE.addService(gestureService);
     BLE.setEventHandler(BLEDisconnected, onDisconnected);
     gestureCharacteristic.writeValue("");
@@ -270,6 +278,7 @@ void loop() {
             + String(gx, 1) + "," + String(gy, 1) + "," + String(gz, 1) + (doubleTap ? " TAP" : ""));
     }
     if (!calibrated) {
+        publishState("CALIB");
         if (fullCal) calibrationStep(x, y, z, gx, gy, gz, now);
         else { orient.apply(x, y, z); orient.apply(gx, gy, gz); calibrationStep(x, y, z, gx, gy, gz, now); }
         return;
@@ -278,6 +287,10 @@ void loop() {
     orient.apply(x, y, z); orient.apply(gx, gy, gz);
     if (!subscribed) doubleTap = false; // No buffering or replay of gestures performed while disconnected.
     Gesture event = detector.update(x, y, z, gx, gy, gz, now, doubleTap);
+    {
+        uint8_t st = detector.stateBits();
+        publishState(st & 1 ? "READY" : st & 2 ? "COOLDOWN" : "WAIT_REST");
+    }
     if (doubleTap) log(detector.tapNote ? String("TAP ignored: ") + detector.tapNote : String("TAP"));
     if (connected && rawCharacteristic.subscribed()) {
         uint8_t p[20];
