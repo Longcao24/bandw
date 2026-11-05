@@ -35,26 +35,70 @@ static inline float pitchAngle(float x, float y, float z) {
     return asinf(s > 1 ? 1 : s < -1 ? -1 : s) * 57.2957795f;
 }
 
-// Collects 100 steady samples (2 s at 50 Hz) of the neutral pose. Up to MAX_REJECTS jittery
-// samples are tolerated per window, so a small tremor does not restart the count.
+// Collects `samples` steady samples (100 = 2 s at 50 Hz) of one pose. Up to MAX_REJECTS jittery samples are
+// tolerated per window, so a small tremor does not restart the count. checkPlane rejects a forearm near vertical
+// (only meaningful once the data is in the band frame, see Orientation).
 class Calibrator {
     float sx = 0, sy = 0, sz = 0;
     int n = 0, rejects = 0;
 public:
     static const int SAMPLES = 100, MAX_REJECTS = 10;
+    int samples = SAMPLES;
+    bool checkPlane = true;
     float meanX = 0, meanY = 0, meanZ = 0;
     void reset() { sx = sy = sz = 0; n = rejects = 0; }
     int count() const { return n; }
     bool add(float x, float y, float z, float gx, float gy, float gz) {
         float m = sqrtf(x*x + y*y + z*z);
-        bool ok = m > 0.85f && m < 1.15f && sqrtf(x*x + z*z) > 0.6f
+        bool ok = m > 0.85f && m < 1.15f && (!checkPlane || sqrtf(x*x + z*z) > 0.6f)
             && fabsf(gx) < 20 && fabsf(gy) < 20 && fabsf(gz) < 20
             && (!n || (fabsf(x - sx/n) < 0.08f && fabsf(y - sy/n) < 0.08f && fabsf(z - sz/n) < 0.08f));
         if (!ok) { if (++rejects > MAX_REJECTS) reset(); return false; }
         sx += x; sy += y; sz += z;
-        if (++n < SAMPLES) return false;
+        if (++n < samples) return false;
         meanX = sx / n; meanY = sy / n; meanZ = sz / n;
         reset();
+        return true;
+    }
+};
+
+// How the IMU sits in the band. The detector expects the BAND frame: X across the wrist (+ = right tilt),
+// Y along the forearm, Z out of the back of the wrist. The 3-step calibration (hold still, tilt left, tilt right)
+// measures gravity in each pose and builds that frame from the raw board axes, so any mounting works
+// (e.g. a board turned 90 deg in the strap, which otherwise reads a sideways tilt as a forearm dip).
+struct Orientation {
+    // Rows: band X, Y, Z expressed in board coordinates.
+    float m[3][3] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+    void apply(float& x, float& y, float& z) const {
+        float a = m[0][0]*x + m[0][1]*y + m[0][2]*z, b = m[1][0]*x + m[1][1]*y + m[1][2]*z, c = m[2][0]*x + m[2][1]*y + m[2][2]*z;
+        x = a; y = b; z = c;
+    }
+    bool identity() const {
+        for (int i = 0; i < 3; ++i) for (int j = 0; j < 3; ++j) if (fabsf(m[i][j] - (i == j ? 1.0f : 0.0f)) > 1e-6f) return false;
+        return true;
+    }
+    static float dot(const float* a, const float* b) { return a[0]*b[0] + a[1]*b[1] + a[2]*b[2]; }
+    static bool unit(float* v) { float n = sqrtf(dot(v, v)); if (n < 1e-3f) return false; v[0] /= n; v[1] /= n; v[2] /= n; return true; }
+    // Degrees between two gravity readings.
+    static float angle(const float* a, const float* b) {
+        float c = dot(a, b) / (sqrtf(dot(a, a)) * sqrtf(dot(b, b)) + 1e-9f);
+        return acosf(c > 1 ? 1 : c < -1 ? -1 : c) * 57.2957795f;
+    }
+    // g0 = neutral, gl = tilted left, gr = tilted right (board coordinates). False if the tilts were not
+    // usable (too small, or not to opposite sides); the orientation is then left unchanged.
+    bool fromTilts(const float* g0, const float* gl, const float* gr) {
+        float z[3] = {g0[0], g0[1], g0[2]};
+        if (!unit(z)) return false;
+        float dl[3], dr[3], x[3];
+        float pl = dot(gl, z), pr = dot(gr, z);
+        for (int i = 0; i < 3; ++i) { dl[i] = gl[i] - pl * z[i]; dr[i] = gr[i] - pr * z[i]; }
+        if (sqrtf(dot(dl, dl)) < 0.25f || sqrtf(dot(dr, dr)) < 0.25f || dot(dl, dr) >= 0) return false; // >= ~15 deg, opposite sides
+        for (int i = 0; i < 3; ++i) x[i] = dr[i] - dl[i];            // gravity moves toward +X when tilting right
+        float px = dot(x, z);
+        for (int i = 0; i < 3; ++i) x[i] -= px * z[i];
+        if (!unit(x)) return false;
+        float y[3] = {z[1]*x[2] - z[2]*x[1], z[2]*x[0] - z[0]*x[2], z[0]*x[1] - z[1]*x[0]};   // y = z cross x
+        for (int i = 0; i < 3; ++i) { m[0][i] = x[i]; m[1][i] = y[i]; m[2][i] = z[i]; }
         return true;
     }
 };

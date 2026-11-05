@@ -195,7 +195,7 @@ async function connect() {
     gesture.addEventListener('characteristicvaluechanged', (e) => log(`Lệnh gửi qua Bluetooth: ${new TextDecoder().decode(e.target.value)}`));
     controlChar = await svc.getCharacteristic(CONTROL);
     await controlChar.startNotifications();
-    controlChar.addEventListener('characteristicvaluechanged', (e) => { const t = new TextDecoder().decode(e.target.value).trim(); log(`Trạng thái: ${t}`); if (t === 'READY') $('status').textContent = '● Đã kết nối · Đã hiệu chuẩn'; if (t === 'CALIBRATING') $('status').textContent = 'Đang hiệu chuẩn: giữ tay yên 2 giây…'; });
+    controlChar.addEventListener('characteristicvaluechanged', (e) => calState(new TextDecoder().decode(e.target.value).trim()));
     await raw.startNotifications();
     raw.addEventListener('characteristicvaluechanged', (e) => onSample(parse(e.target.value)));
     $('status').textContent = `● Đã kết nối ${device.name || 'BandW'}`; $('calib').disabled = false; $('connect').disabled = true;
@@ -206,6 +206,28 @@ async function connect() {
   }
 }
 $('connect').addEventListener('click', connect);
+// 3-step calibration prompts from the band (firmware 0.6.0+): CALIBRATING -> CAL_LEFT -> CAL_RIGHT -> READY.
+const CAL = {
+  CALIBRATING: ['BƯỚC 1/3', 'GIỮ TAY YÊN', 'Đặt tay ở tư thế bình thường khi dùng (mu bàn tay hướng lên), giữ yên khoảng 2 giây.'],
+  CAL_LEFT: ['BƯỚC 2/3', 'NGHIÊNG TRÁI', 'Nghiêng cổ tay sang TRÁI khoảng 30–45° rồi giữ yên ở đó.'],
+  CAL_RIGHT: ['BƯỚC 3/3', 'NGHIÊNG PHẢI', 'Nghiêng cổ tay sang PHẢI khoảng 30–45° rồi giữ yên ở đó.'],
+};
+let calOverlay = false;
+function calState(t) {
+  log(`Trạng thái: ${t}`);
+  if (CAL[t] && !session) {
+    const [step, title, hint] = CAL[t];
+    $('gStep').textContent = step; $('gTitle').textContent = title; $('gHint').textContent = hint;
+    $('gCount').textContent = ''; $('gBar').style.width = '0'; $('gbox').classList.toggle('go', t !== 'CALIBRATING');
+    $('gstop').textContent = 'Ẩn'; $('guide').classList.add('show'); calOverlay = true; beep(t === 'CALIBRATING' ? 520 : 880, 200);
+    $('status').textContent = `Đang hiệu chuẩn · ${step}`;
+  }
+  if (t === 'CAL_SKIPPED') log('Không thấy nghiêng trái/phải trong 20 giây: giữ hướng trục cũ.');
+  if (t === 'READY') {
+    $('status').textContent = '● Đã kết nối · Đã hiệu chuẩn';
+    if (calOverlay) { calOverlay = false; $('guide').classList.remove('show'); $('gstop').textContent = 'Dừng phiên (vẫn lưu phần đã ghi)'; beep(1200, 120); }
+  }
+}
 $('calib').addEventListener('click', async () => { try { await controlChar.writeValue(new TextEncoder().encode('CALIBRATE')); log('Đã gửi lệnh hiệu chuẩn'); } catch (e) { log(`Không gửi được lệnh hiệu chuẩn: ${e.message}`); } });
 
 // ---------- demo (no band): a scripted wrist ----------
@@ -301,7 +323,10 @@ function finish(done) {
   log(`${done ? 'Xong' : 'Dừng'} phiên ghi: ${rows.length} mẫu`);
   if (rows.length) saveCsv(`bandw-tinyml-${person.replace(/[^\w-]/g, '')}`);
 }
-$('gstop').addEventListener('click', () => finish(false));
+$('gstop').addEventListener('click', () => {
+  if (calOverlay) { calOverlay = false; $('guide').classList.remove('show'); $('gstop').textContent = 'Dừng phiên (vẫn lưu phần đã ghi)'; return; }
+  finish(false);
+});
 setInterval(() => {
   if (!session) return;
   const left = Math.max(0, session.end - performance.now());
@@ -316,7 +341,7 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true 
 renderer.setPixelRatio(Math.min(2, devicePixelRatio));
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
-camera.position.set(3.1, 2.3, 1.2); camera.lookAt(0, -0.15, -1.55);
+camera.position.set(0.9, 2.1, 3.0); camera.lookAt(0, -0.1, -1.7); // from behind the elbow, like looking at your own arm
 scene.add(new THREE.HemisphereLight(0xffffff, 0x8a9a80, 1.4));
 const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(3, 6, 4); scene.add(sun);
 const skin = new THREE.MeshStandardMaterial({ color: 0xedc6a3, roughness: 0.7 });
