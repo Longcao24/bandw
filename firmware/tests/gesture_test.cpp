@@ -108,7 +108,7 @@ int main() {
     for (float d : {25.0f, 30.0f, 35.0f, -35.0f}) { Rig small; small.neutral(); small.helpDips(d); small.neutral(); assert(small.events.empty()); }
     Rig bigHelp; bigHelp.neutral(); bigHelp.helpDips(45); assert(only(bigHelp, Gesture::Help));
     Rig oneDip; oneDip.neutral(); oneDip.dip(55); oneDip.neutral(); assert(oneDip.events.empty());
-    Rig swing; swing.neutral(); swing.dip(55); swing.dip(-55); swing.neutral(); assert(swing.events.empty()); // through neutral
+    Rig swing; swing.neutral(); swing.dip(55); swing.dip(-55); swing.neutral(); assert(only(swing, Gesture::Help)); // a big down-and-up sweep is HELP (as done on a real wrist)
     Rig slowDips; slowDips.neutral(); slowDips.dip(55, 1000); slowDips.dip(55, 1000); slowDips.neutral();
     assert(slowDips.events.empty());
     Rig farDips; farDips.neutral(); farDips.dip(55, 300, 1800); farDips.dip(55); farDips.neutral(); assert(farDips.events.empty());
@@ -181,6 +181,28 @@ int main() {
     Rig overflow2(UINT32_MAX-1000); overflow2.neutral(); overflow2.tap(); overflow2.hold(0, 300);
     overflow2.neutral(); overflow2.helpDips();
     assert(overflow2.events.size()==2 && overflow2.events[0]==Gesture::Yes && overflow2.events[1]==Gesture::Help);
+
+    // Measured on a real wrist (2026-11-05): finger taps are one-sample 2.9-3.2 g spikes after a still wrist, and the
+    // IMU's hardware double-tap flag never fired. Two spikes 0.1-0.7 s apart from a still wrist = YES (software).
+    Rig swTap; swTap.neutral(); swTap.sample(0,0,3.0f); for (int i=0;i<2;++i) swTap.sample(0,120); swTap.hold(0,200);
+    swTap.sample(0,0,2.9f); swTap.hold(0,400); assert(only(swTap, Gesture::Yes));
+    Rig oneSpike; oneSpike.neutral(); oneSpike.sample(0,0,3.0f); oneSpike.hold(0,1500); assert(oneSpike.events.empty());
+    Rig slowPair; slowPair.neutral(); slowPair.sample(0,0,3.0f); slowPair.hold(0,900); slowPair.sample(0,0,3.0f); slowPair.hold(0,400);
+    assert(slowPair.events.empty());                       // taps too far apart
+    Rig movingSpikes; movingSpikes.neutral();              // impacts while the arm swings (e.g. HELP, setting down) are not taps
+    for (int i=0;i<6;++i) movingSpikes.sample(0,90); movingSpikes.sample(0,90,3.0f); for (int i=0;i<4;++i) movingSpikes.sample(0,90);
+    movingSpikes.sample(0,90,3.0f); movingSpikes.hold(0,400); assert(movingSpikes.events.empty());
+    // HELP as one big sweep through neutral ("lower it, then raise it"), either order; a single big dip is not HELP.
+    Rig sweep; sweep.neutral(); sweep.holdPitch(-60, 400); sweep.holdPitch(65, 400); sweep.hold(0, 300); assert(only(sweep, Gesture::Help));
+    Rig sweepUp; sweepUp.neutral(); sweepUp.holdPitch(60, 400); sweepUp.holdPitch(-60, 400); assert(only(sweepUp, Gesture::Help));
+    // Holding the forearm down and then sweeping up quickly is HELP; a slow posture change (30 deg/s) is not.
+    Rig holdSweep; holdSweep.neutral(); holdSweep.holdPitch(-60, 2500); holdSweep.holdPitch(60, 400); assert(only(holdSweep, Gesture::Help));
+    Rig slowSweep; slowSweep.neutral(); slowSweep.holdPitch(-60, 600);
+    for (float p = -60; p <= 60; p += 0.6f) slowSweep.sample(0, 0, 1, p); slowSweep.holdPitch(60, 400); assert(slowSweep.events.empty());
+    // NO: a wide, slow shake (one reversal every ~0.6 s, as recorded) is still NO.
+    Rig wideShake; wideShake.neutral();
+    for (int ph=0; ph<3; ++ph) for (int i=0;i<30;++i) wideShake.sample(0, ph%2 ? -250 : 250);
+    assert(only(wideShake, Gesture::No));
 
     // Orientation from the 3-step calibration: any mounting maps to the band frame
     // (X across the wrist, + = right tilt; Y along the forearm; Z out of the back of the wrist).
